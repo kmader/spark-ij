@@ -1,61 +1,27 @@
 package fourquant.imagej
 
 import java.io._
-import javax.imageio.ImageIO
-import javax.servlet.http.HttpServletRequest
 
+import fourquant.imagej.ParameterSweep.ImageJSweep
+import fourquant.imagej.Spiji.{PIPOps, PIPTools}
 import ij.ImagePlus
 import ij.plugin.PlugIn
 import ij.plugin.filter.PlugInFilter
 import ij.process.ImageProcessor
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.mapreduce.lib.input.{CombineFileRecordReader, CombineFileSplit}
-import org.apache.hadoop.mapreduce.{InputSplit, TaskAttemptContext}
 import org.apache.spark.annotation.Experimental
-import org.apache.spark.input.{BinaryFileInputFormat, BinaryRecordReader}
-import org.apache.spark.ui.tipl.WebViz
-import org.apache.spark.ui.tipl.WebViz.{ExtInfo, RDDInfo}
 import org.json4s.JsonAST.JValue
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import _root_.tipl.blocks.ParameterSweep.ImageJSweep
-import _root_.tipl.formats.TImgRO
-import _root_.tipl.ij.Spiji.{PIPOps, PIPTools}
-import _root_.tipl.ij.{ImageStackToTImg, Spiji}
 
 import scala.collection.mutable.ArrayBuffer
-import scala.reflect.ClassTag
 
 object ImagePlusIO extends Serializable {
   /**
    * Should immutablity of imageplus be ensured at the cost of performance and memory
    */
   val ensureImmutability: Boolean = true
-  //import tipl.ij.scripting.scOps.imageJSparkContext
-  /**
-   * The new (Hadoop 2.0) InputFormat for imagej files (not be to be confused with the
-   * recordreader
-   * itself)
-   */
-  class ImagePlusFileInputFormat extends BinaryFileInputFormat[PortableImagePlus] {
-    override def createRecordReader(split: InputSplit, taContext: TaskAttemptContext) = {
-      new CombineFileRecordReader[String, PortableImagePlus](split.asInstanceOf[CombineFileSplit],
-        taContext, classOf[ImagePlusRecordReader])
-    }
-  }
 
-
-  class ImagePlusRecordReader(
-                               split: CombineFileSplit,
-                               context: TaskAttemptContext,
-                               index: Integer)
-    extends BinaryRecordReader[PortableImagePlus](split, context, index) {
-
-    def parseByteArray(path: Path,inArray: Array[Byte]) =
-      new PortableImagePlus(Spiji.loadImageFromByteArray(inArray,path.toString().
-        split("[.]").last))
-  }
 
 
 
@@ -305,7 +271,8 @@ object ImagePlusIO extends Serializable {
       Spiji.setTempCurrentImage(localImgCopy)
       cmd match {
         case "setThreshold" | "applyThreshold" =>
-          import _root_.tipl.blocks.ParameterSweep.ImageJSweep.argMap
+          import fourquant.imagej.ParameterSweep.ImageJSweep.argMap // for the implicit
+          // conversions getDbl
           val lower = pargs.getDbl("lower",Double.MinValue)
           val upper = pargs.getDbl("upper",Double.MaxValue)
           Spiji.setThreshold(lower,upper)
@@ -341,10 +308,6 @@ object ImagePlusIO extends Serializable {
     def analyzeParticles() = {
       IJResultsTable.fromCL(Some(curImg))
     }
-
-
-    def getTImgRO(): TImgRO =
-      ImageStackToTImg.FromImagePlus(curImg)
 
     /**
      * average two portableimageplus objects together
@@ -429,40 +392,6 @@ object ImagePlusIO extends Serializable {
     private def readObjectNoData: Unit = {
       throw new IllegalArgumentException("Cannot have a dataless PortableImagePlus");
     }
-  }
-
-
-  /**
-   * Support for ImagePlus
-   * case ((_, firstImage: TImgRO), tRdd: RDD[(_, TImgRO)]) =>
-   */
-  abstract class ImagePlusViz(parentTabPrefix: String, slicePageName: String)(
-    implicit val et: ClassTag[PortableImagePlus]) extends WebViz.VizTool {
-    val thumbPath = "/" + parentTabPrefix + "/" + slicePageName
-    val slicePath = thumbPath + "/png"
-
-    val format = "png"
-    val imgSize = 250
-
-    override type elementType = PortableImagePlus
-
-    /**
-     * Support the conversion of elements which have elementType in their key (less common)
-     * @return
-     */
-    override def supportKeys(): Boolean = false
-
-    override def typedRawRender(ele: elementType, info: ExtInfo, ri: RDDInfo, request:
-    HttpServletRequest) = {
-      val baos = new ByteArrayOutputStream()
-
-      ImageIO.write(
-        ele.getImg().getProcessor().resize(250).getBufferedImage,
-        format, baos
-      )
-      baos.toByteArray
-    }
-
   }
 
 }

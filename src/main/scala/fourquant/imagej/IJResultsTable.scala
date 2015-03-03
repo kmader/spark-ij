@@ -1,6 +1,6 @@
 package fourquant.imagej
 
-import _root_.tipl.ij.Spiji
+
 import ij.{ImagePlus, WindowManager}
 
 /**

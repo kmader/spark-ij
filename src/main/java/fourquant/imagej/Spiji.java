@@ -60,6 +60,7 @@ package fourquant.imagej;
 // - Added a createImage method with the possibility to show or show the image
 //
 //=====================================================================================
+
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -79,8 +80,6 @@ import ij.plugin.frame.Recorder;
 import ij.process.*;
 import net.imagej.patcher.LegacyEnvironment;
 import net.imagej.patcher.LegacyInjector;
-import tipl.spark.SparkGlobal;
-import tipl.util.TImgTools;
 
 import java.awt.Polygon;
 import java.awt.Rectangle;
@@ -89,6 +88,8 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Set;
 import java.util.StringTokenizer;
+
+import static fourquant.imagej.TImgTools.*;
 
 /**
  * Matlab to ImageJ interface.
@@ -134,7 +135,93 @@ import java.util.StringTokenizer;
 
 public class Spiji {
 
-    public static ImageJ imagej;
+    public static interface SpijiImageJContext {
+        public LegacyEnvironment getLE();
+        public void setTempCurrentImage(ImagePlus ip);
+        public ImagePlus getCurImage();
+
+        public void run(String marco, String args);
+        public void runMacro(String macroData, String params);
+
+        /**
+         * Is this a legacy/hack environment
+         * @return
+         */
+        public boolean isLegacy();
+
+    }
+
+
+    /**
+     *         if(ij1==null)  IJ.runMacro(macroData,args);
+     else ij1.runMacro(macroData,args);
+     */
+    public static class LegacyEnvironmentContext extends LegacyEnvironment
+            implements SpijiImageJContext {
+
+        public LegacyEnvironmentContext(ClassLoader loader,boolean headless) throws
+                ClassNotFoundException {
+            super(loader,headless);
+        }
+        @Override
+        public LegacyEnvironment getLE() {
+            return this;
+        }
+        //TODO replace this with a meaningful version by fixing LegacyEnvironment
+        @Deprecated
+        @Override
+        public void setTempCurrentImage(ImagePlus ip) {
+            WindowManager.setTempCurrentImage(ip);
+        }
+
+        //TODO replace this with a meaningful version by fixing LegacyEnvironment
+        @Override
+        @Deprecated
+        public ImagePlus getCurImage() {
+            return WindowManager.getCurrentImage();
+        }
+
+        @Override
+        public boolean isLegacy() {
+            return true;
+        }
+    }
+    public static class SPImageJContext implements SpijiImageJContext {
+        protected ImageJ imagej;
+
+        public SPImageJContext(ImageJ curImageJ) {
+            imagej=curImageJ;
+        }
+        @Override
+        public LegacyEnvironment getLE() {
+            return null;
+        }
+
+        @Override
+        public void setTempCurrentImage(ImagePlus ip) {
+            WindowManager.setTempCurrentImage(ip);
+        }
+
+        @Override
+        public ImagePlus getCurImage() {
+            return WindowManager.getCurrentImage();
+        }
+
+        @Override
+        public void run(String macro, String args) {
+            IJ.run(macro,args);
+        }
+
+        @Override
+        public void runMacro(String macroData, String params) {
+            IJ.runMacro(macroData,params);
+        }
+
+        @Override
+        public boolean isLegacy() {
+            return true;
+        }
+    }
     private static final String version = "2.0";
     private static final int CAL = 1;
     private static final int NOCAL = 0;
@@ -299,16 +386,18 @@ public class Spiji {
         launch(args.split("\\s"),visible);
     }
 
-    private static LegacyEnvironment ij1;
+    private static SpijiImageJContext ij1;
 
     static {
         final boolean useLegacy = false;
         if(useLegacy) {
             try {
-                ij1 = new LegacyEnvironment(null, true);
+                ij1 = new LegacyEnvironmentContext(null, true);
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        } else {
+            ij1 = new SPImageJContext(null);
         }
     }
 
@@ -331,14 +420,14 @@ public class Spiji {
         }
         if((!visible) && (ij1==null)) {
             try {
-                ij1 = new LegacyEnvironment( Thread.currentThread().getContextClassLoader(), true);
+                ij1 = new LegacyEnvironmentContext( Thread.currentThread().getContextClassLoader(), true);
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
                 System.err.println("Classes could not be patched!");
             }
         }
 
-        if (imagej instanceof ImageJ) {
+        if (ij1 instanceof ImageJ) {
             if (verbose) {
                 System.out.println("--------------------------------------------------------------");
                 System.out.println("Status> ImageJ is already started.");
@@ -350,8 +439,8 @@ public class Spiji {
         // ///////////////////////////////
         // /////These are the important lines
         // //////////////////////////////////
-        if(visible) imagej = new ImageJ();
-        else imagej = new ImageJ(2);
+        if(visible) ij1 = new SPImageJContext(new ImageJ());
+        else ij1 =  new SPImageJContext(new ImageJ(2));
         if (myargs != null) {
             if (verbose) {
                 System.out.println("ImageJ> Arguments:");
@@ -362,7 +451,7 @@ public class Spiji {
         }
         // /////////////////////////////////
 
-        if (imagej instanceof ImageJ) {
+        if (!ij1.isLegacy() ) {
             if (verbose) {
                 System.out.println("ImageJ> Version:" + IJ.getVersion());
                 System.out.println("ImageJ> Memory:" + IJ.freeMemory());
@@ -387,9 +476,10 @@ public class Spiji {
         IJ.getInstance().setTitle("ImageJ [MIJ " + version + "]");
     }
 
+
+
     public static void setTempCurrentImage(ImagePlus ip) {
-        if(ij1==null) WindowManager.setTempCurrentImage(ip);
-        else ij1.setTempCurrentImage(ip);
+        ij1.setTempCurrentImage(ip);
     }
 
     /**
@@ -397,8 +487,8 @@ public class Spiji {
      */
     public static void exit() {
         IJ.getInstance().quit();
-        imagej = null;
-        if (verbose && !(imagej instanceof ImageJ)) {
+        ij1 = null;
+        if (verbose) {
             System.out.println("ImageJ instance ended cleanly");
         }
     }
@@ -499,7 +589,7 @@ public class Spiji {
      * @return Object
      */
     public static Object getRoi(int option) {
-        ImagePlus imageplus = WindowManager.getCurrentImage();
+        ImagePlus imageplus = ij1.getCurImage();
         Roi roi = imageplus.getRoi();
         Calibration cal = imageplus.getCalibration();
         double fh = cal.pixelHeight;
@@ -539,8 +629,7 @@ public class Spiji {
         return ret;
     }
     public static ImagePlus getCurImage() {
-        if(ij1==null) return WindowManager.getCurrentImage();
-        else return ij1.getCurrentImage();
+        return ij1.getCurImage();
     }
 
     /**
@@ -676,10 +765,10 @@ public class Spiji {
 
          Object[] istack = imageplus.getStack().getImageArray();
          assert(slice>0 && slice<istack.length);
-       int sliceType = TImgTools.identifySliceType(istack[slice]);
-        double[] sliceData =(double[]) TImgTools.convertArrayType(istack[slice], sliceType, TImgTools
-                        .IMAGETYPE_DOUBLE, false,
-               1,100);
+       int sliceType = identifySliceType(istack[slice]);
+        double[] sliceData =(double[]) convertArrayType(istack[slice], sliceType,
+                IMAGETYPE_DOUBLE, false,
+                1, 100);
         double[][] output = new double[1][sliceData.length];
         output[0]=sliceData;
         return output;
@@ -1260,8 +1349,7 @@ public class Spiji {
      *            command to run
      */
     public static void run(String command) {
-        if(ij1==null) IJ.run(command);
-        else ij1.run(command,"");
+        ij1.run(command,"");
     }
 
     public static void runMacro(String macroData, String args) {
@@ -1528,14 +1616,38 @@ public class Spiji {
         return baos.toByteArray();
     }
 
+    /**
+     * A mechanism for producing temporary files (for replacement by other tools like spark which
+     * have specific directories for these things
+     */
+    public static interface TempFileProducer {
+        public String getTempDirectory() throws IOException;
+        public File getTempFile(String prefix, String suffix) throws IOException;
+    }
+
+
+    /**
+     * The temp file producer, replace it with another instance to change where things are saved
+     */
+    public static TempFileProducer tfp = new TempFileProducer() {
+
+        @Override
+        public String getTempDirectory() throws IOException{
+            return File.createTempFile("junk","spk").toPath().getParent().toString();
+        }
+
+        @Override
+        public File getTempFile(String prefix, String suffix) throws IOException {
+            return File.createTempFile(prefix,suffix,new File(getTempDirectory()));
+        }
+    };
+
     protected static File getSparkTempFile(String prefix,String suffix) throws IOException {
-        File tempDir = new File(SparkGlobal.getSparkLocal());
-        return File.createTempFile(prefix,suffix,tempDir);
+        return tfp.getTempFile(prefix,suffix);
     }
 
     public static void saveImage(ImagePlus curImage, String path) throws IOException {
         IJ.save(curImage,path);
-
     }
 }
 

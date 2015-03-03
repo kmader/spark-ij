@@ -46,6 +46,14 @@
             <artifactId>imagej</artifactId>
         </dependency>
 
+        <!-- ImageJ 1 dependencies -->
+        <dependency>
+            <groupId>net.imagej</groupId>
+            <artifactId>ij</artifactId>
+        </dependency>
+
+
+
         <!-- spark connection dependencies -->
         <dependency>
             <groupId>org.scalatest</groupId>
