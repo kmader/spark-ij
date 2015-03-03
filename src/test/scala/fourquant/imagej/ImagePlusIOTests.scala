@@ -1,6 +1,7 @@
 package tipl.ij.scripting
 
-import fourquant.imagej.ImagePlusIO.PortableImagePlus
+import fourquant.imagej.ImagePlusIO.{LogEntry, PortableImagePlus}
+import fourquant.imagej.Spiji.PIPOps
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.FunSuite
@@ -10,41 +11,45 @@ import org.scalatest.FunSuite
  */
 
 
-  class ImageLogTests extends FunSuite {
+class ImageLogTests extends FunSuite {
 
-    implicit class jsonToString(jsonText: JValue) {
-      def show(): String = pretty(render(jsonText))
-    }
-    val width = 10
+
+  implicit class jsonToString(jsonText: JValue) {
+    def show(): String = pretty(render(jsonText))
+  }
+
+
+  val width = 10
   val height = 10
 
-    lazy val createImage = new PortableImagePlus(
-      Array.fill[Int](width,height)(1000))
+  lazy val createImage = new PortableImagePlus(
+    Array.fill[Int](width, height)(1000))
 
-    test("LogEntry to JSON") {
-      val le = LogEntry.create("TestSource", "TestInfo")
-      val jsle = le.toJSON()
-      val jstxt = jsle.show
-      println(jstxt)
-      assert(LogEntry.fromJSON(jsle).le_eq(le),"Matches before and after serialization")
-    }
+  test("LogEntry to JSON") {
+    val le = LogEntry.create("TestSource", "TestInfo")
+    val jsle = le.toJSON()
+    val jstxt = jsle.show
+    println(jstxt)
+    assert(LogEntry.fromJSON(jsle).le_eq(le), "Matches before and after serialization")
+  }
 
-    test("Merge log entries") {
-      val dblImg = createImage ++ createImage
-      println(createImage.imgLog.toJsStrArray().mkString("\n\t"))
-      println(dblImg.imgLog.toJsStrArray().mkString("\n\t"))
-      assert(dblImg.imgLog(0).opType == PIPOps.MERGE_STORE,"first command is merge store")
-      assert(createImage.imgLog.log_eq(dblImg.imgLog(0).children),
-        "first child of the first image is equal to the image")
+  test("Merge log entries") {
+    val dblImg = createImage ++ createImage
+    println(createImage.imgLog.toJsStrArray().mkString("\n\t"))
+    println(dblImg.imgLog.toJsStrArray().mkString("\n\t"))
+    assert(dblImg.imgLog(0).opType == PIPOps.MERGE_STORE, "first command is merge store")
+    assert(createImage.imgLog.log_eq(dblImg.imgLog(0).children),
+      "first child of the first image is equal to the image")
 
-      assert(createImage.imgLog.log_eq(dblImg.imgLog(1).children),
-        "first child is equal to the image")
-      assert(dblImg.imgLog(2).opType == PIPOps.MERGE,"third command is merge")
-
-
-    }
+    assert(createImage.imgLog.log_eq(dblImg.imgLog(1).children),
+      "first child is equal to the image")
+    assert(dblImg.imgLog(2).opType == PIPOps.MERGE, "third command is merge")
 
   }
-  class ImagePlusIOTests extends FunSuite {
 
-  }
+}
+
+
+class ImagePlusIOTests extends FunSuite {
+
+}

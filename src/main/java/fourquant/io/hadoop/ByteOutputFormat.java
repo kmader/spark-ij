@@ -23,7 +23,7 @@ import java.io.IOException;
  * @author Saliya Ekanayake
  * @author Kevin Mader (moodifications
  */
-public class ByteOutputFormat<K, V> extends FileOutputFormat {
+public class ByteOutputFormat<K, V> extends FileOutputFormat<K,V> {
     protected static class ByteRecordWriter<K, V> implements RecordWriter<K, V> {
         private DataOutputStream out;
 

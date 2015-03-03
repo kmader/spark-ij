@@ -1,9 +1,8 @@
 package fourquant.imagej
 
-import ImagePlusIO.{ImageLog, ImagePlusFileInputFormat, LogEntry, PortableImagePlus}
+import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry, PortableImagePlus}
 import fourquant.io.hadoop.ByteOutputFormat
-
-import ij.{IJ, ImagePlus, ImageStack}
+import ij.{ImagePlus, ImageStack}
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, NullWritable}
 import org.apache.hadoop.mapred.JobConf
@@ -11,6 +10,7 @@ import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFor
 import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat, Job => NewHadoopJob}
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
+import org.apache.spark.input.ImagePlusFileInputFormat
 import org.apache.spark.rdd.{OldBinaryFileRDD, RDD}
 
 import scala.reflect.ClassTag
@@ -220,15 +220,14 @@ object scOps {
           kvlist.map(kv => (kv._1,kv._2.run(cmd,args)))
       }
     }
-    //TODO re-implement run range
-    /**
+    /*
      * Runs a range of different parameters on each image
      * @param cmd the command to run (example "Median...")
      * @param startingArgs starting argument (example "radius=1"
      * @param endingArgs ending argument (example "radius=5")
      * @param steps number of steps between
      * @return updated list of images with appended paths
-
+     */
     def runRange(cmd: String, startingArgs: String, endingArgs: String,steps: Int = 5 )(
       implicit fs: ImageJSettings) = {
       val swSteps = ParameterSweep.ImageJSweep.ImageJMacroStepsToSweep(
@@ -247,7 +246,7 @@ object scOps {
           }
       }
     }
-     */
+
 
     def getStatistics() = {
       inRDD.mapValues(_.getImageStatistics())
@@ -281,7 +280,7 @@ object scOps {
      * Saves the images locally using ImageJ
      * @param suffix text to add to the existing path
      */
-    protected[ij] def saveImagesLocal(suffix: String)(implicit fs: ImageJSettings) = {
+    protected[imagej] def saveImagesLocal(suffix: String)(implicit fs: ImageJSettings) = {
       inRDD.foreachPartition{
         imglist =>
           SetupImageJInPartition(fs)
@@ -299,7 +298,8 @@ object scOps {
      * @param path the folder to write the images too
      * @param newSuffix the suffix (for writing the correct filetype
      */
-    protected[ij] def saveImages(path: String,newSuffix: String)(implicit fs: ImageJSettings) = {
+    protected[imagej] def saveImages(path: String,newSuffix: String)(
+      implicit fs: ImageJSettings) = {
       val format = classOf[ByteOutputFormat[NullWritable, BytesWritable]]
       val jobConf = new JobConf(inRDD.context.hadoopConfiguration)
       val namelist = inRDD.keys.collect
@@ -352,28 +352,5 @@ object scOps {
   }
 
   implicit def ImagePlusToPortableImagePlus(imp: ImagePlus) = new PortableImagePlus(imp)
-
-  implicit class ijConvertableBlock[T](inBlock: TImgSlice[T]) {
-    def asTImg() = {
-      new TImgSliceAsTImg(inBlock)
-    }
-  }
-
-  implicit class rddImage[V](inImg: RDD[(D3int,TImgSlice[V])]) {
-    def show() = {
-
-    }
-  }
-
-  /**
-   * Read the image as a TImg file
-   */
-  def OpenImg(path: String): TImgRO = TImgTools.ReadTImg(path)
-  def GetCurrentImage() = {
-    val curImage = IJ.getImage()
-    _root_.tipl.ij.ImageStackToTImg.FromImagePlus(curImage)
-  }
-
-
 
 }

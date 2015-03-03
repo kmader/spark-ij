@@ -11,6 +11,7 @@ import fourquant.imagej.scOps.ImageJSettings
  */
 
 object IJGlobal {
+
   /**
    * These parameters should be adjustable, somehow...
    */
@@ -25,7 +26,7 @@ object IJGlobal {
   /**
    * Force headless status
    */
-  def forceHeadless {
+  def forceHeadless() {
     try {
       val defaultHeadlessField = classOf[GraphicsEnvironment].getDeclaredField("defaultHeadless")
       defaultHeadlessField.setAccessible(true)

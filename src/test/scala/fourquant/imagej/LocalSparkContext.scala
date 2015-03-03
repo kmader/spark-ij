@@ -8,13 +8,13 @@ package org.apache.spark
 
 import _root_.io.netty.util.internal.logging.{InternalLoggerFactory, Slf4JLoggerFactory}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
-import tipl.spark.SparkGlobal
 
 /** Manages a local `sc` {@link SparkContext} variable, correctly stopping it after each test. */
 trait LocalSparkContext extends BeforeAndAfterEach with BeforeAndAfterAll {
+
   self: Suite =>
 
-  @transient var sc: SparkContext = SparkGlobal.getContext("test",false).sc //_
+  @transient private var isc: Option[SparkContext] = Some(new SparkContext("local[4]","Test"))
 
   override def beforeAll() {
     InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory())
@@ -35,17 +35,26 @@ trait LocalSparkContext extends BeforeAndAfterEach with BeforeAndAfterAll {
 
 
   def resetSparkContext() = {
-    LocalSparkContext.stop(sc)
-    SparkGlobal.stopContext()
-    sc = null
+    isc.map(LocalSparkContext.stop(_))
   }
 
-  def getSpark(testName: String) =
-    SparkGlobal.getContext("Testing:" + testName).sc
-  def getSpark(master: String, testName: String ) = {
-    SparkGlobal.activeParser(("-@masternode="+master).split("\n"))
-    SparkGlobal.getContext("Testing:" + testName).sc
+  def getSpark(testName: String) = {
+    isc match {
+      case Some(tsc) => tsc
+      case None =>
+        val nsc = new SparkContext("local[4]", testName)
+        isc = Some(nsc)
+        nsc
+    }
   }
+
+  def getNewSpark(masterName: String,testName: String) = {
+    isc.map(LocalSparkContext.stop(_))
+    val nsc = new SparkContext(masterName,testName)
+    isc = Some(nsc)
+    nsc
+  }
+
   lazy val masterNode = {
     org.apache.spark.deploy.master.Master.main("".split(","))
     Thread.sleep(5000)
@@ -62,7 +71,7 @@ trait LocalSparkContext extends BeforeAndAfterEach with BeforeAndAfterAll {
 object LocalSparkContext {
 
   def stop(sc: SparkContext) {
-    SparkGlobal.stopContext()
+    sc.stop()
     // To avoid Akka rebinding to the same port, since it doesn't unbind immediately on shutdown
     System.clearProperty("spark.driver.port")
   }
