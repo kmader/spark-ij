@@ -1,6 +1,6 @@
 package fourquant.imagej
 
-import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry, PortableImagePlus}
+import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.io.hadoop.ByteOutputFormat
 import ij.{ImagePlus, ImageStack}
 import org.apache.hadoop.fs.Path
@@ -9,9 +9,9 @@ import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFormat}
 import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat, Job => NewHadoopJob}
 import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
 import org.apache.spark.input.ImagePlusFileInputFormat
 import org.apache.spark.rdd.{OldBinaryFileRDD, RDD}
+import org.apache.spark.sql.SQLContext
 
 import scala.reflect.ClassTag
 
@@ -350,7 +350,44 @@ object scOps {
     }
 
   }
-
+  @deprecated("should be avoided, but makes some operations easier","1.0")
   implicit def ImagePlusToPortableImagePlus(imp: ImagePlus) = new PortableImagePlus(imp)
+
+  implicit class ImageJFriendlySQLContext(sq: SQLContext) {
+    /** add all the needed udfs to the sqlcontext **/
+    def registerImageJ(implicit fs: ImageJSettings): Unit = {
+      // it needs a different name so we give it a suffix showing the number of arguments
+      sq.udf.register("run2",
+        (s: PortableImagePlus, cmd: String, args: String) =>
+          s.run(cmd,args)
+      )
+
+      sq.udf.register("run",
+        (s: PortableImagePlus, cmd: String) =>
+          s.run(cmd)
+      )
+
+      sq.udf.register("stats",
+        (s: PortableImagePlus) =>
+          s.getImageStatistics().toString() //TODO switch to standard statistics
+      )
+
+      sq.udf.register("shape",(s: PortableImagePlus) =>
+        s.analyzeParticles().toString() //TODO make shape an udt as well
+
+      )
+
+      //TODO add some io and other useful operations here
+      //TODO add analyze particles
+    }
+
+    def registerDebugFunctions() = {
+
+      sq.udf.register("tostring",(s: AnyRef) => s.toString)
+
+    }
+  }
+
+
 
 }

@@ -1,9 +1,6 @@
 package fourquant.imagej
 
-import fourquant.imagej.ImagePlusIO.PortableImagePlus
 import fourquant.imagej.scOps._
-
-import org.apache.spark.SparkContext._
 import org.apache.spark.{LocalSparkContext, SparkContext}
 import org.scalatest.{FunSuite, Matchers}
 

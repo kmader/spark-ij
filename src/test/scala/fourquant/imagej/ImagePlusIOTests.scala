@@ -1,17 +1,18 @@
 package tipl.ij.scripting
 
-import fourquant.imagej.ImagePlusIO.{LogEntry, PortableImagePlus}
+import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
+import fourquant.imagej.PortableImagePlus
 import fourquant.imagej.Spiji.PIPOps
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import org.scalatest.FunSuite
+import org.scalatest.{Matchers, FunSuite}
 
 /**
  * Created by mader on 1/20/15.
  */
 
 
-class ImageLogTests extends FunSuite {
+class ImageLogTests extends FunSuite with Matchers {
 
 
   implicit class jsonToString(jsonText: JValue) {
@@ -31,6 +32,32 @@ class ImageLogTests extends FunSuite {
     val jstxt = jsle.show
     println(jstxt)
     assert(LogEntry.fromJSON(jsle).le_eq(le), "Matches before and after serialization")
+  }
+
+  test("Log to JSON and back manually") {
+    val slog = createImage.imgLog
+    val js = slog.toJSONString()
+    val logJV = parse(js)
+    logJV.children.length shouldBe slog.ilog.length
+    val newlog = new ImageLog(logJV.children.map(LogEntry.fromJSON(_)))
+    newlog.ilog.length shouldBe slog.ilog.length
+    newlog.log_eq(slog) shouldBe true
+  }
+
+  test("Log to JSON and back functions") {
+    val slog = createImage.imgLog
+
+    // try json first
+    val jvs = slog.toJSON()
+    val jslog = ImageLog.fromJSON(jvs)
+    jslog.ilog.length shouldBe slog.ilog.length
+    jslog.log_eq(slog) shouldBe true
+
+    // now try json as strings
+    val js = slog.toJSONString()
+    val newlog = ImageLog.fromJSONString(js)
+    newlog.ilog.length shouldBe slog.ilog.length
+    newlog.log_eq(slog) shouldBe true
   }
 
   test("Merge log entries") {

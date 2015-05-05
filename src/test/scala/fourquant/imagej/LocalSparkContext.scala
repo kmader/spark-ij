@@ -7,6 +7,8 @@ package org.apache.spark
  */
 
 import _root_.io.netty.util.internal.logging.{InternalLoggerFactory, Slf4JLoggerFactory}
+import org.apache.log4j.Logger
+import org.apache.log4j.varia.NullAppender
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
 /** Manages a local `sc` {@link SparkContext} variable, correctly stopping it after each test. */
@@ -68,7 +70,7 @@ trait LocalSparkContext extends BeforeAndAfterEach with BeforeAndAfterAll {
 }
 
 
-object LocalSparkContext {
+object LocalSparkContext extends Serializable {
 
   def stop(sc: SparkContext) {
     sc.stop()
@@ -84,5 +86,11 @@ object LocalSparkContext {
       stop(sc)
     }
   }
+
+  trait SilenceLogs {
+    Logger.getRootLogger().removeAllAppenders()
+    Logger.getRootLogger().addAppender(new NullAppender())
+  }
+
 
 }

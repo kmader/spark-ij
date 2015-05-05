@@ -1,8 +1,7 @@
 package org.apache.spark.input {
 
 
-import fourquant.imagej.ImagePlusIO.PortableImagePlus
-import fourquant.imagej.Spiji
+import fourquant.imagej.{PortableImagePlus, Spiji}
 import org.apache.hadoop.mapreduce.lib.input.{CombineFileRecordReader, CombineFileSplit}
 import org.apache.hadoop.mapreduce.{InputSplit, TaskAttemptContext}
 ;
