@@ -225,7 +225,7 @@ public class Spiji {
     private static final String version = "2.0";
     private static final int CAL = 1;
     private static final int NOCAL = 0;
-    private static boolean verbose = true;
+    private static boolean verbose = false;
 
     /**
      * The type of operations supported

@@ -2,7 +2,7 @@ package fourquant.imagej
 
 import java.io.Serializable
 
-import fourquant.imagej.ImageStatistics.ImageStatisticsUDT
+import fourquant.imagej.ImgStat.ImageStatisticsUDT
 import org.apache.spark.sql.{types, Row}
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
 import org.apache.spark.sql.types._
@@ -24,7 +24,12 @@ case class ImageStatistics(min: Double,mean: Double, stdDev: Double,
 
 }
 
-object ImageStatistics extends Serializable {
+
+/**
+ * If it has the same name, some scalac things get angry, probably a bug of some sorts
+ * Error:scalac: error while loading ImageStatistics, illegal class file dependency between 'object ImageStatistics' and 'class ImageStatistics'
+ */
+object ImgStat extends Serializable {
   /**
    * the Sparksql user-defined type for the the ImageStatistics
    */
