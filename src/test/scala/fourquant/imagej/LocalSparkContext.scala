@@ -57,16 +57,6 @@ trait LocalSparkContext extends BeforeAndAfterEach with BeforeAndAfterAll {
     nsc
   }
 
-  lazy val masterNode = {
-    org.apache.spark.deploy.master.Master.main("".split(","))
-    Thread.sleep(5000)
-  }
-
-  lazy val workerNode = {
-    org.apache.spark.deploy.worker.Worker.main("spark://localhost:8080".split(","))
-    Thread.sleep(1000)
-  }
-
 }
 
 

@@ -364,6 +364,7 @@ public class Spiji {
      *            and macros folder
      */
     public static void setupExt(String IJpath) {
+
         if (System.getProperty("java.imagej") == null) {
             System.setProperty("java.ext.dirs", System.getProperty("java.ext.dirs") + ":" + IJpath + "/jre/lib/ext");
             System.setProperty("java.imagej", "set");

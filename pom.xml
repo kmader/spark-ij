@@ -23,14 +23,13 @@
 
         <scala.binary.version>2.10</scala.binary.version>
         <scala.macros.version>2.0.1</scala.macros.version>
-        <spark.version>1.3.0</spark.version>
+        <spark.version>1.4.1</spark.version>
         <javadoc.skip>false</javadoc.skip>
         <java.memory.min>-Xms1G</java.memory.min>
         <java.memory.max>-Xmx2G</java.memory.max>
 
         <PermGen>256m</PermGen>
         <MaxPermGen>1024m</MaxPermGen>
-        <tipl.version>1.0-SNAPSHOT</tipl.version>
         <!-- NB: Specify formatting of the maven.build.timestamp property. -->
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssZ</maven.build.timestamp.format>
 
@@ -53,21 +52,19 @@
         </dependency>
 
 
-
-        <!-- spark connection dependencies -->
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.binary.version}</artifactId>
             <version>2.1.5</version>
             <scope>test</scope>
         </dependency>
-
+        
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
         </dependency>
-
+         <!-- spark connection dependencies -->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
@@ -78,6 +75,12 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+        <!-- for extended sql functions like explode and udaf -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-hive_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
 
@@ -282,8 +285,8 @@
                     <skipTests>true</skipTests>
                     -->
 
-                    <parallel>classes</parallel>
-                    <threadCount>2</threadCount>
+                    <parallel>suites</parallel>
+                    <threadCount>1</threadCount>
 
                 </configuration>
             </plugin>

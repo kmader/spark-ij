@@ -369,13 +369,22 @@ object scOps {
 
       sq.udf.register("stats",
         (s: PortableImagePlus) =>
-          s.getImageStatistics().toString() //TODO switch to standard statistics
+          s.getImageStatistics()
+      )
+
+      sq.udf.register("mean",
+        (s: PortableImagePlus) =>
+          s.getMeanValue() //TODO switch to standard statistics
       )
 
       sq.udf.register("shape",(s: PortableImagePlus) =>
         s.analyzeParticles().toString() //TODO make shape an udt as well
 
       )
+
+      sq.udf.register("subtract",(s: PortableImagePlus, t: PortableImagePlus) => s.subtract(t))
+
+      sq.udf.register("scale",(s: PortableImagePlus, scFactor: Double) => s.multiply(scFactor))
 
       //TODO add some io and other useful operations here
       //TODO add analyze particles
