@@ -1,6 +1,6 @@
 package ch.fourquant.images.types
 
-import fourquant.imagej.ImageStatistics
+import fourquant.imagej.{IJHistogram, ImageStatistics}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
 import org.apache.spark.sql.types._
@@ -9,6 +9,9 @@ import org.apache.spark.sql.types._
  * Error:scalac: error while loading ImageStatistics, illegal class file dependency between 'object ImageStatistics' and 'class ImageStatistics'
  */
 
+case class HistogramCC(bin_centers: Array[Double], bin_counts: Array[Int]) {
+  def this(hist: IJHistogram) = this(hist.bin_centers,hist.counts)
+}
 
 /**
  * the Sparksql user-defined type for the the ImageStatistics

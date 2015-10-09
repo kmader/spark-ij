@@ -133,8 +133,8 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
       simpHist.bin_centers(0) shouldBe 0.0+-0.1
       simpHist.bin_centers(2) shouldBe 10.0+-0.1
       val tcount = (SpijiTests.width*SpijiTests.height)
-      val zbin = if(imgType.contains("8-bit") || imgType.contains("Color")) tcount else 0
-      val obin = if(imgType.contains("8-bit") || imgType.contains("Color")) 0 else tcount
+      val zbin = if(!imgType.contains("16-bit")) tcount else 0
+      val obin = if(!imgType.contains("16-bit")) 0 else tcount
       simpHist.counts(0) shouldBe zbin
       simpHist.counts(1) shouldBe obin
       simpHist.counts(2) shouldBe 0

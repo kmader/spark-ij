@@ -34,9 +34,10 @@ case class IJHistogram(bin_centers: Array[Double], counts: Array[Int]) {
   }
 }
 
-object IJHistogram {
+object IJHistogram extends Serializable {
 
   val histInterpCount = 10000
+  val PERMISSIVE = true
 
   /**
    * convert one spacing of histogram to another (very discrete)
@@ -56,6 +57,33 @@ object IJHistogram {
           map(_._2).sum // keep the count and sum it
     }
   }
+
+
+  /**
+   * Prevents acquiring a imageprocessor (like 32-bit) which is incapable of creating useful,
+   * histogram, requires updating soon
+   * @param nip
+   */
+  implicit class RobustImagePlus(nip: ImagePlus) {
+    /**
+     * @note Converts the image to 16-bit if a histogram cannot be produced from the processor
+     * @return
+     */
+    def getHistProcessor(): ImageProcessor = {
+      val cip = nip.getProcessor()
+      Option(cip.getHistogram()) match {
+        case Some(hist) => cip
+        case None =>
+          import PortableImagePlus.implicits._
+          nip.run("16-bit").getProcessor()
+      }
+    }
+  }
+  /**
+   * Since the ImageProcessor class throws back nulls, improperly sized arrays and all sorts of
+   * unusable garbage some of the functions need to be improved
+   * @param ip
+   */
   implicit class RobustImageProcessor(ip: ImageProcessor) {
     def getSmartHistogram(cRange: (Double,Double), bins: Int) = {
       ip.setHistogramRange(cRange._1,cRange._2)
@@ -73,9 +101,12 @@ object IJHistogram {
             ip.minValue().to(ip.maxValue(),
               (ip.maxValue()-ip.minValue())/poorlySized.length).toArray
           histConverter(recBins,poorlySized,outCents)
-        case None =>
+        case None if PERMISSIVE =>
+          System.err.println(s"Histogram Returned an Invalid Result: "+ip)
+          outCents.map(_.toInt*0)
+        case None if !(PERMISSIVE) =>
           throw new RuntimeException(
-            s"Histogram Returned an Invalid Result:"+histArr
+            s"Histogram Returned an Invalid Result:"+ip
           )
       }
 
@@ -85,7 +116,7 @@ object IJHistogram {
 
   def fromIJ(inImg: Option[ImagePlus] = None, inRange: Option[(Double,Double)] = None,
               bins: Int = 60000) = {
-    val cProc = inImg.getOrElse(Spiji.getCurImage).getProcessor.
+    val cProc = inImg.getOrElse(Spiji.getCurImage).getHistProcessor.
       duplicate() // don't screw the old one
 
     val cRange = inRange.getOrElse((cProc.minValue,cProc.maxValue))

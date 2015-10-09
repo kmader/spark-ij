@@ -24,10 +24,7 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
                         var imgLog: ImageLog) extends Serializable {
 
   val pipStoreSerialization = false
-  /**
-   * Should immutablity of imageplus be ensured at the cost of performance and memory
-   */
-  val ensureImmutability: Boolean = true
+
 
   /**
    * if only one entry is given, create a new log from the one entry
@@ -87,45 +84,22 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
 
   // useful commands in imagej
   def run(cmd: String, args: String = ""): PortableImagePlus = {
-    lazy val pargs = ImageJSweep.parseArgsWithDelim(args," ")
-    val localImgCopy = if(ensureImmutability) curImg.duplicate() else curImg
-
-    Spiji.setTempCurrentImage(localImgCopy)
-    cmd match {
-      case "setThreshold" | "applyThreshold" =>
-        import fourquant.imagej.ParameterSweep.ImageJSweep.argMap // for the implicit
-      // conversions getDbl
-      val lower = pargs.getDbl("lower",Double.MinValue)
-        val upper = pargs.getDbl("upper",Double.MaxValue)
-        Spiji.setThreshold(lower,upper)
-        cmd match {
-          case "applyThreshold" =>
-            Spiji.run("Convert to Mask")
-          case _ =>
-            Unit
-        }
-      case _ =>
-        Spiji.run(cmd,args)
-    }
-    new PortableImagePlus(Spiji.getCurImage(),
+    import PortableImagePlus.implicits._
+    new PortableImagePlus(curImg.run(cmd,args),
       this.imgLog.appendAndCopy(LogEntry.ijRun(cmd,args))
     )
   }
 
   def runAsPlugin(cmd: String, args: String = ""): Either[PlugIn,PlugInFilter] = {
-    Spiji.setTempCurrentImage(curImg)
-    Spiji.runCommandAsPlugin(cmd,args) match {
-      case plug: PlugIn =>
-        Left(plug)
-      case plugfilt: PlugInFilter =>
-        Right(plugfilt)
-    }
+    import PortableImagePlus.implicits._
+    curImg.runAsPlugin(cmd,args)
   }
 
-  def getImageStatistics() ={
-    val istat = curImg.getStatistics
-    ImageStatistics(istat.min,istat.mean,istat.stdDev,istat.max,istat.pixelCount)
+  def getImageStatistics() = {
+    import PortableImagePlus.implicits._
+    curImg.getImageStatistics()
   }
+
 
   def getMeanValue() =
     getImageStatistics().mean
@@ -227,6 +201,57 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
   @throws(classOf[ObjectStreamException])
   private def readObjectNoData: Unit = {
     throw new IllegalArgumentException("Cannot have a dataless PortableImagePlus");
+  }
+}
+
+object PortableImagePlus extends Serializable {
+  /**
+   * Should immutablity of imageplus be ensured at the cost of performance and memory
+   */
+  val ensureImmutability: Boolean = true
+
+  object implicits extends Serializable {
+    implicit class cleverImagePlus(curImg: ImagePlus) {
+      def run(cmd: String, args: String = ""): ImagePlus = {
+        lazy val pargs = ImageJSweep.parseArgsWithDelim(args," ")
+        val localImgCopy = if(ensureImmutability) curImg.duplicate() else curImg
+
+        Spiji.setTempCurrentImage(localImgCopy)
+        cmd match {
+          case "setThreshold" | "applyThreshold" =>
+            import fourquant.imagej.ParameterSweep.ImageJSweep.argMap // for the implicit
+          // conversions getDbl
+          val lower = pargs.getDbl("lower",Double.MinValue)
+            val upper = pargs.getDbl("upper",Double.MaxValue)
+            Spiji.setThreshold(lower,upper)
+            cmd match {
+              case "applyThreshold" =>
+                Spiji.run("Convert to Mask")
+              case _ =>
+                Unit
+            }
+          case _ =>
+            Spiji.run(cmd,args)
+        }
+        Spiji.getCurImage()
+      }
+
+      def runAsPlugin(cmd: String, args: String = ""): Either[PlugIn,PlugInFilter] = {
+        Spiji.setTempCurrentImage(curImg)
+        Spiji.runCommandAsPlugin(cmd,args) match {
+          case plug: PlugIn =>
+            Left(plug)
+          case plugfilt: PlugInFilter =>
+            Right(plugfilt)
+        }
+      }
+
+      def getImageStatistics() = {
+        val istat = curImg.getStatistics
+        ImageStatistics(istat.min, istat.mean, istat.stdDev, istat.max, istat.pixelCount)
+      }
+
+    }
   }
 }
 

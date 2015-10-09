@@ -1,5 +1,6 @@
 package fourquant.imagej
 
+import ch.fourquant.images.types.HistogramCC
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.io.hadoop.ByteOutputFormat
 import ij.{ImagePlus, ImageStack}
@@ -385,6 +386,17 @@ object scOps {
       sq.udf.register("subtract",(s: PortableImagePlus, t: PortableImagePlus) => s.subtract(t))
 
       sq.udf.register("scale",(s: PortableImagePlus, scFactor: Double) => s.multiply(scFactor))
+
+      sq.udf.register("hist",(s: PortableImagePlus) => new HistogramCC(s.getHistogram()))
+
+      sq.udf.register("hist3",
+        (s: PortableImagePlus, minVal: Double, maxVal: Double, bins: Int) =>
+        new HistogramCC(
+          s.getHistogram(
+            Some((minVal,maxVal)),
+            bins)
+        )
+      )
 
       sq.udf.register("hist_compare",(s1: PortableImagePlus, s2: PortableImagePlus) =>
         (s1.getHistogram()-s2.getHistogram())
