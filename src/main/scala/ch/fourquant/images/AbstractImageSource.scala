@@ -1,6 +1,6 @@
 package ch.fourquant.images
 
-import ch.fourquant.images.types.NamedSQLImage
+import ch.fourquant.images.types.{NamedSQLImage, FullSQLImage}
 import fourquant.imagej.{PortableImagePlus => PIP}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.ScalaReflection
@@ -20,22 +20,30 @@ import scala.reflect.runtime.universe.TypeTag
 abstract class AbstractImageSource
   extends RelationProvider with CreatableRelationProvider {
 
+  var tableType = "simple" //todo only works now as simple
+
   override def createRelation(sq: SQLContext, parameters: Map[String, String]):
   BaseRelation = {
-    parameters.getOrElse("debug","false").toUpperCase() match {
-      case "TRUE" =>
+    val pm = parseArguments(parameters)
+    pm.getOrElse("debug","false") match {
+      case "true" =>
         SimpleImageRelation(
-          createTestImages(sq.sparkContext, parameters)
+          createTestImages(sq.sparkContext, pm)
         )(sq)
       case _ =>
-        parameters.get("path") match {
-          case Some(path) => makeRelation(sq,path,parameters)
+        pm.get("path") match {
+          case Some(path) => makeRelation(sq,path,pm)
           case None => throw new SparkException("Path is needed for creation")
         }
     }
 
   }
 
+  def parseArguments(pm: Map[String,String]): Map[String,String] = {
+    val fpm = pm.map(f => (f._1.toLowerCase(),f._2.toLowerCase()))
+    tableType=fpm.getOrElse("table",tableType)
+    fpm
+  }
   override def createRelation(sq: SQLContext, mode: SaveMode, parameters: Map[String,
     String], data: DataFrame): BaseRelation = {
     parameters.get("path") match {
@@ -44,16 +52,17 @@ abstract class AbstractImageSource
     }
   }
 
-  val tableType = "Simple" //todo only works now as simple
+
 
   def makeRelation(sq: SQLContext, path: String, pm: Map[String,String]) = {
     tableType match {
-      case "Simple" =>
+      case "simple" =>
         SimpleImageRelation(
           readImagesFromPath(sq.sparkContext, path, pm)
         )(sq)
-      case "Abstract" =>
-        AbstractImageRelation[NamedSQLImage](
+      case "abstract" =>
+        println("Using Abstract Backend")
+        AbstractImageRelation[FullSQLImage](
           readImagesFromPath(sq.sparkContext, path, pm),
           AbstractImageSource.SimpleImage
         )(sq)
@@ -75,7 +84,7 @@ abstract class AbstractImageSource
 
 
 object AbstractImageSource extends Serializable {
-  def SimpleImage(path: String,img: PIP) = NamedSQLImage(path,img)
+  def SimpleImage(path: String,img: PIP) = new FullSQLImage(path,img)
 
 }
 

@@ -13,8 +13,8 @@ object SpijiTests extends Serializable {
   val localMasterWorkers = false
   val runLocal = true
   val runLocalCluster = false
-  val ijs = ImageJSettings("/Applications/Fiji.app/", showGui = false, runLaunch = false, record
-    = false)
+  val ijs = ImageJSettings("/Applications/Fiji.app/", showGui = false, runLaunch = false,
+    record = false)
 
   def makeTestImages(sc: SparkContext, fact: Int = 1,
                      imgs: Int, width: Int, height: Int) =
@@ -23,14 +23,26 @@ object SpijiTests extends Serializable {
 
 }
 
+class FullSpijiTests extends AbsSpijiTests {
+  override def getIJS(): ImageJSettings = SpijiTests.ijs.copy(showGui = true,runLaunch = true)
+}
 
+class LaunchedSpijiTests extends AbsSpijiTests {
+  override def getIJS(): ImageJSettings = SpijiTests.ijs.copy(showGui = false,runLaunch = true)
+}
+
+class HeadlessSpijiTests extends AbsSpijiTests {
+  override def getIJS(): ImageJSettings = SpijiTests.ijs.copy(showGui = false,runLaunch = false)
+}
 /**
  * Ensure the distributed fiji code works as expected including reading and writing files, basic
  * plugin support, and histogram / table analysis
  * Created by mader on 1/16/15.
  */
 
-class SpijiTests extends FunSuite with Matchers {
+abstract class AbsSpijiTests extends FunSuite with Matchers {
+  def getIJS(): ImageJSettings
+
   test("ImageJ Tests") {
     assert(
       !Spiji.getCommandList.contains("Auto Threshold"),
@@ -45,40 +57,115 @@ class SpijiTests extends FunSuite with Matchers {
   }
 
   test("Fiji Setup Tests") {
-    SpijiTests.ijs.setupFiji()
+    getIJS.setupFiji()
+
     assert(
       Spiji.getCommandList.contains("Auto Threshold"),
       "Auto Threshold is part of FIJI")
   }
+  for (thrshCmd <-
+       Array(
+         ("applyThreshold", "lower=0 upper=20"),
+         ("Auto Threshold", "method=IsoData white setthreshold")
+       )
+  ) {
+    test(s"Simple Noise: $thrshCmd") {
+      getIJS.setupFiji()
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(0))
 
-  test("Single Autothreshold") {
-    SpijiTests.ijs.setupFiji()
+      val rt = tImg.run("Add Noise").
+        run(thrshCmd._1,thrshCmd._2).
+        run("Convert to Mask").
+        analyzeParticles()
 
-    val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(0))
+      println(rt)
 
-    val rt = tImg.run("Add Noise").run("Auto Threshold", "method=IsoData white setthreshold").
-      run("Convert to Mask").analyzeParticles()
+      assert(rt.numObjects > 0, "More than 0 objects")
+      assert(rt.mean("Empty Column").isEmpty, "Made up column names should be empty")
+      assert(rt.numObjects > 0, "There should be more than a single object")
+      assert(rt.sum("Area").get < (SpijiTests.width * SpijiTests.height),
+        "The noise shouldnt fill up the entire image")
+      assert(rt.min("Area").get < rt.max("Area").get, "Minimum area should be less than maximum")
+      assert(rt.min("Area").get > 0, "Minumum should be greater than 0")
+    }
 
-    println(rt.header.mkString(","))
-    assert(rt.numObjects > 0, "More than 0 objects")
-    assert(rt.mean("Empty Column").isEmpty, "Made up column names should be empty")
-    assert(rt.mean("Area").get < 10.0, "Noise should be small single pixels")
+    test(s"Reusing Images: $thrshCmd") {
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+
+      val cTable = tImg.
+        run(thrshCmd._1,thrshCmd._2).
+        run("Convert to Mask").
+        analyzeParticles()
+
+      assert(cTable.mean("Area").isDefined, "Area column should be present")
+      assert(cTable.mean("Area").get < 20.0, "Noise should be small single pixels")
+
+      val dTable = tImg.
+        run(thrshCmd._1,thrshCmd._2).
+        run("Convert to Mask").
+        analyzeParticles()
+
+      assert(cTable.numObjects == 1, "Should have one object")
+    }
+
   }
-  test("Quick Shape") {
+
+
+  test("Histogram Analysis") {
     val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
-
-    val cTable = tImg.run("applyThreshold", "lower=10 upper=20").run("Convert to Mask")
-      .analyzeParticles()
-
-
-    assert(cTable.mean("Area").get < 20.0, "Noise should be small single pixels")
-
-    val dTable = tImg.run("applyThreshold", "lower=0 upper=20").
-      run("Convert to Mask").
-      analyzeParticles()
-
-    assert(cTable.numObjects == 1, "Should have one object")
+    val simpHist = tImg.getHistogram(Some((0.0,10.0)),bins=3)
+    println(simpHist)
+    simpHist.bin_centers(0) shouldBe 0.0+-0.1
+    simpHist.bin_centers(2) shouldBe 10.0+-0.1
+    simpHist.counts(0) shouldBe 0
+    simpHist.counts(2) shouldBe 0
+    simpHist.counts(1) shouldBe (SpijiTests.width*SpijiTests.height)
   }
+
+  for(imgType <- Array("8-bit","16-bit","32-bit","RGB Color")) {
+    test(s"Histogram Analysis $imgType") {
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+      val simpHist = tImg.
+        run(imgType).
+        getHistogram(Some((0.0,10.0)),bins=3)
+
+      println(simpHist)
+      simpHist.bin_centers(0) shouldBe 0.0+-0.1
+      simpHist.bin_centers(2) shouldBe 10.0+-0.1
+      val tcount = (SpijiTests.width*SpijiTests.height)
+      val zbin = if(imgType.contains("8-bit") || imgType.contains("Color")) tcount else 0
+      val obin = if(imgType.contains("8-bit") || imgType.contains("Color")) 0 else tcount
+      simpHist.counts(0) shouldBe zbin
+      simpHist.counts(1) shouldBe obin
+      simpHist.counts(2) shouldBe 0
+
+    }
+  }
+
+  test("Histogram Distance") {
+    val noiseFree = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+    val noiseFreeShift =
+      new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(50))
+    val noisyImage = noiseFree.run("Add Noise")
+
+    val nfHist = noiseFree.getHistogram()
+    val nfsHist = noiseFreeShift.getHistogram()
+    val noHist = noisyImage.getHistogram()
+
+    println("NF:\t"+nfHist)
+    println("NFS:\t"+nfsHist)
+    println("NO:\t"+noHist)
+
+    println("Diff:"+(noHist-nfHist))
+    println("Diff:"+(nfsHist-nfHist))
+    nfHist-nfHist shouldBe 0.0+-0.01
+    noHist-nfHist should be > 0.0
+    noHist-nfHist should be < 1.0
+    nfsHist-nfHist shouldBe 1.0+-0.01
+
+
+  }
+
 }
 
 
@@ -186,7 +273,7 @@ class DistributedSpijiTests extends FunSuite with LocalSparkContext with Matcher
         " be 255")
     }
 
-    test(conName + ":Testing Parameter Sweep") {
+    test(conName + ": Testing Parameter Sweep") {
 
       val imgList = makeTestImages(sc, 1, SpijiTests.imgs, SpijiTests.width, SpijiTests.height)
       imgList.runAll("Add Noise").
@@ -195,7 +282,7 @@ class DistributedSpijiTests extends FunSuite with LocalSparkContext with Matcher
 
     }
 
-    test(conName + ":Testing Log Values") {
+    test(conName + ": Testing Log Values") {
       val imgList = makeTestImages(sc, 1, SpijiTests.imgs, SpijiTests.width, SpijiTests.height)
       val oLogs = imgList.runAll("Add Noise").
         runRange("Median...", "radius=1.0", "radius=5.0").mapValues(_.imgLog)

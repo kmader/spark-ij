@@ -386,6 +386,10 @@ object scOps {
 
       sq.udf.register("scale",(s: PortableImagePlus, scFactor: Double) => s.multiply(scFactor))
 
+      sq.udf.register("hist_compare",(s1: PortableImagePlus, s2: PortableImagePlus) =>
+        (s1.getHistogram()-s2.getHistogram())
+      )
+
       //TODO add some io and other useful operations here
       //TODO add analyze particles
     }

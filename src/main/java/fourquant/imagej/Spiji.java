@@ -225,6 +225,7 @@ public class Spiji {
     private static final String version = "2.0";
     private static final int CAL = 1;
     private static final int NOCAL = 0;
+
     private static boolean verbose = false;
 
     /**
@@ -323,7 +324,7 @@ public class Spiji {
     public static void start(String IJpath, boolean visible, boolean runLaunch) {
         System.setProperty("plugins.dir", IJpath);
         System.setProperty("ij.dir", IJpath);
-        verbose = true;
+        verbose = false;
         setupExt(IJpath);
         if(runLaunch) launch(null,visible);
     }
@@ -383,7 +384,7 @@ public class Spiji {
      */
     public static void start(String args, String IJpath, boolean visible) {
         setupExt(IJpath);
-        verbose = true;
+        verbose = false;
         launch(args.split("\\s"),visible);
     }
 
@@ -1369,7 +1370,7 @@ public class Spiji {
     /**
      * Get the classname of a specific command
      * @param commandName
-     * @return an array with the first element being the classname the second being the default
+     * @return an array with the first element being tise classname the second being the default
      * arguments
      */
     public static String[] getCommandClassArgs(String commandName) {

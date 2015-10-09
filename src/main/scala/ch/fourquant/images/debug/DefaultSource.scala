@@ -15,9 +15,6 @@ class DefaultSource extends AbstractImageSource {
     import fourquant.imagej.scOps._
     () => sc.createEmptyImages(path, count, 10, 11,
       (i: Int) => (i - 1) * 1000 + 1000, None)
-    /*
-    sc.readWholeImagesDouble(path,20).
-      mapValues(doubleArr => new PIP(doubleArr))
-    */
+
   }
 }

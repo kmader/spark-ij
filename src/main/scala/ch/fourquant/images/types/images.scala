@@ -57,7 +57,7 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
   }
 
   override def hashCode = 9571330
-  override def typeName = "PortiableImagePlus["+"]"
+  override def typeName = "PortableImagePlusSQL"
   override def asNullable = this
 
   override def userClass: Class[PortableImagePlus] = classOf[PortableImagePlus]
@@ -65,7 +65,30 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
 
 
 /**
- * Created by mader on 10/9/15.
+ * A very simple construction for storing named sql images
  */
 case class NamedSQLImage(sample: String, image: PortableImagePlus)
 
+
+/**
+ * A slightly more detailed structure
+ * @param path
+ * @param name
+ * @param parent
+ * @param fullpath
+ * @param width the width
+ * @param height the height
+ * @param slices the number of slices (for 3d images)
+ *
+ * @param image the portableimageplus structure
+ */
+case class FullSQLImage(path: String, name: String, parent: String,fullpath: Array[String],
+                        width: Int, height: Int, slices: Int,
+                        image: PortableImagePlus) {
+  def this(sample: String, image: PortableImagePlus) =
+    this(sample,sample.split("/").reverse.head,
+      sample.split("/").reverse.apply(2),sample.split("/"),
+      image.getImg().getWidth,image.getImg().getHeight(),
+      image.getImg().getNSlices(),image)
+
+}
