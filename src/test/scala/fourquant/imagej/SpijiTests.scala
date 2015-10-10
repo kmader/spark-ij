@@ -158,12 +158,11 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
 
     println("Diff:"+(noHist-nfHist))
     println("Diff:"+(nfsHist-nfHist))
+
     nfHist-nfHist shouldBe 0.0+-0.01
     noHist-nfHist should be > 0.0
     noHist-nfHist should be < 1.0
     nfsHist-nfHist shouldBe 1.0+-0.01
-
-
   }
 
 }

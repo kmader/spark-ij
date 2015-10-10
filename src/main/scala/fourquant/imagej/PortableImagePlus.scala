@@ -116,7 +116,7 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
    * @return a histogram case class (compatible with SQL)
    */
   @Experimental
-  def getHistogram(range: Option[(Double,Double)] = None, bins: Int = 1000) =
+  def getHistogram(range: Option[(Double,Double)] = None, bins: Int = IJHistogram.histInterpCount) =
     IJHistogram.fromIJ(Some(curImg),range,bins)
 
   /**

@@ -21,7 +21,7 @@ class rddImage extends ImageStack {
 }
 
 trait FijiInit {
-  def setupSpark(sc: SparkContext): Unit
+  def setupSpark(sc: SparkContext, partRun: Boolean): Unit
   def setupFiji(): Unit
 }
 
@@ -52,11 +52,18 @@ object scOps {
                            runLaunch: Boolean = true,
                            record: Boolean = false
                              ) extends FijiInit {
-    override def setupSpark(sc: SparkContext) = {
+
+    def setupSpark(sc: SparkContext, partRun: Boolean = false) = {
       if(!showGui) {
         if (forceHeadless) IJGlobal.forceHeadless();
         sc.setLocalProperty("java.awt.headless","false")
       }
+      sc.parallelize(1 to 100,30).
+        mapPartitions{
+        ip =>
+          setupFiji()
+          ip
+      }.collect()
     }
     override def setupFiji() = {
       if(!showGui) {
@@ -92,7 +99,7 @@ object scOps {
     def createEmptyImages[A : ClassTag](prefix: String, imgs: Int, width: Int, height: Int,
                           indFun: (Int) => A, ijs: Option[ImageJSettings] = None) = {
       // set everything up correctly if it is present
-      ijs.map(_.setupSpark(sc))
+      ijs.map(_.setupSpark(sc,true))
       sc.
         parallelize(0 until imgs).
         map(

@@ -19,6 +19,11 @@ case class IJHistogram(bin_centers: Array[Double], counts: Array[Int]) {
     IJHistogram(newCents,IJHistogram.histConverter(bin_centers,counts,newCents))
   }
 
+  def normalized_counts() = {
+    val total = counts.sum.toDouble
+    counts.map(_/total)
+  }
+
   /**
    * Histogram subtraction for a simple distance metric
    * @param ij2 the compared distance metric
@@ -28,9 +33,10 @@ case class IJHistogram(bin_centers: Array[Double], counts: Array[Int]) {
   def -(ij2: IJHistogram) = {
     val colMin = (bin_centers++ij2.bin_centers).min
     val colMax = (bin_centers++ij2.bin_centers).max
-    val newMe = this.interp(colMin,colMax,IJHistogram.histInterpCount).counts
-    val newYou = ij2.interp(colMin,colMax,IJHistogram.histInterpCount).counts
-    newMe.zip(newYou).map(ab => Math.abs(ab._1 - ab._2)).sum*1.0/(newMe++newYou).sum
+    val newMe = this.interp(colMin,colMax,IJHistogram.histInterpCount).normalized_counts
+    val newYou = ij2.interp(colMin,colMax,IJHistogram.histInterpCount).normalized_counts
+
+    newMe.zip(newYou).map(ab => Math.abs(ab._1 - ab._2)).sum/2.0
   }
 }
 
