@@ -1,11 +1,14 @@
 package fourquant.imagej
 
 
+import ch.fourquant.images.types.{IJResultsTableUDT, ImageStatisticsUDT}
 import ij.{ImagePlus, WindowManager}
+import org.apache.spark.sql.types
 
 /**
  * Created by mader on 1/28/15.
  */
+@types.SQLUserDefinedType(udt = classOf[IJResultsTableUDT])
 case class IJResultsTable(header: Array[String], rows: IndexedSeq[Array[Double]]) {
   lazy val hmap = header.zipWithIndex.toMap
 
@@ -24,27 +27,31 @@ case class IJResultsTable(header: Array[String], rows: IndexedSeq[Array[Double]]
 
   /**
    * The mean value of a column
-   * @param colName
+    *
+    * @param colName
    * @return
    */
   def mean(colName: String) = sum(colName).map(_/numObjects)
 
   /**
    * The sum of a column (if it exists)
-   * @param colName
+    *
+    * @param colName
    * @return
    */
   def sum(colName: String) = getColumn(colName).map(col => (col.sum))
 
   /**
    * The minimum value of a column (if it exists)
-   * @param colName
+    *
+    * @param colName
    * @return
    */
   def min(colName: String) = getColumn(colName).map(col => (col.min))
   /**
    * The maximum value of a column (if it exists)
-   * @param colName
+    *
+    * @param colName
    * @return
    */
   def max(colName: String) = getColumn(colName).map(col => (col.max))

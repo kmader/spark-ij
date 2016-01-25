@@ -13,6 +13,7 @@ case class IJHistogram(bin_centers: Array[Double], counts: Array[Int]) {
   override def toString() = {
     ("Hist:\n"+toPairs().filter(_._2>0).map(ij => ij._1+"\t"+ij._2).mkString("\n\t"))
   }
+
   def interp(newMin: Double, newMax: Double, newCount: Int) = {
     val centStep = (newMax-newMin)/(newCount-1)
     val newCents = newMin.to(newMax,centStep).toArray

@@ -82,7 +82,12 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
     )
   }
 
-  // useful commands in imagej
+  /**
+    * Run a plugin and return a new image
+    * @param cmd the name of the command
+    * @param args the arguments (optional)
+    * @return
+    */
   def run(cmd: String, args: String = ""): PortableImagePlus = {
     import PortableImagePlus.implicits._
     new PortableImagePlus(curImg.run(cmd,args),
@@ -90,10 +95,26 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
     )
   }
 
+  /**
+    * get the image and the table
+    * @param cmd
+    * @param args
+    * @return an image and a table
+    */
+  def runWithTable(cmd: String, args: String = ""): (PortableImagePlus, IJResultsTable) = {
+    import PortableImagePlus.implicits._
+    val (outImPlus,outTable) = curImg.runWithTable(cmd,args)
+    (new PortableImagePlus(outImPlus,
+      this.imgLog.appendAndCopy(LogEntry.ijRun(cmd,args))),
+      outTable)
+  }
+
   def runAsPlugin(cmd: String, args: String = ""): Either[PlugIn,PlugInFilter] = {
     import PortableImagePlus.implicits._
     curImg.runAsPlugin(cmd,args)
   }
+
+
 
   def getImageStatistics() = {
     import PortableImagePlus.implicits._
@@ -234,6 +255,15 @@ object PortableImagePlus extends Serializable {
             Spiji.run(cmd,args)
         }
         Spiji.getCurImage()
+      }
+
+      /**
+        * A function to run a command and keep both the output image and the results table in a tuple
+        * @return the image followed by the output table
+        */
+      def runWithTable(cmd: String, args: String = "") = {
+        (run(cmd,args),
+          IJResultsTable.fromIJ())
       }
 
       def runAsPlugin(cmd: String, args: String = ""): Either[PlugIn,PlugInFilter] = {

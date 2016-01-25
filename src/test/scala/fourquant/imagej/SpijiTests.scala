@@ -34,6 +34,8 @@ class LaunchedSpijiTests extends AbsSpijiTests {
 class HeadlessSpijiTests extends AbsSpijiTests {
   override def getIJS(): ImageJSettings = SpijiTests.ijs.copy(showGui = false,runLaunch = false)
 }
+
+
 /**
  * Ensure the distributed fiji code works as expected including reading and writing files, basic
  * plugin support, and histogram / table analysis
@@ -107,6 +109,17 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
 
       assert(cTable.numObjects == 1, "Should have one object")
     }
+
+  }
+
+  test("Test Results Table with Hist Command") {
+    val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+    val (outImg,outTable) = tImg
+      .runWithTable("Histogram")
+
+    println(s"Header: ${outTable.header.mkString(",")}")
+
+
 
   }
 

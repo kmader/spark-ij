@@ -16,9 +16,6 @@ import org.apache.spark.sql.SQLContext
 
 import scala.reflect.ClassTag
 
-class rddImage extends ImageStack {
-
-}
 
 trait FijiInit {
   def setupSpark(sc: SparkContext, partRun: Boolean): Unit
@@ -52,19 +49,31 @@ object scOps {
                            runLaunch: Boolean = true,
                            record: Boolean = false
                              ) extends FijiInit {
+    /**
+      * The initial number of partitions to create
+      * @return default is 30, but can be overridden for other cluster configurations
+      */
+    def initPartitionCount() = 30
+
+    /**
+      * The number of elements in the first grouping, the elements are divided over initPartitionCount partitions
+      * @return per default 100 but can be lower for many cases
+      */
+    def initElementCount() = 100
 
     def setupSpark(sc: SparkContext, partRun: Boolean = false) = {
       if(!showGui) {
         if (forceHeadless) IJGlobal.forceHeadless();
         sc.setLocalProperty("java.awt.headless","false")
       }
-      sc.parallelize(1 to 100,30).
+      sc.parallelize(1 to initPartitionCount,initElementCount).
         mapPartitions{
         ip =>
           setupFiji()
           ip
       }.collect()
     }
+
     override def setupFiji() = {
       if(!showGui) {
         if (forceHeadless) IJGlobal.forceHeadless();
@@ -363,61 +372,9 @@ object scOps {
 
   implicit class ImageJFriendlySQLContext(sq: SQLContext) {
     /** add all the needed udfs to the sqlcontext **/
-    def registerImageJ(implicit fs: ImageJSettings): Unit = {
-      // it needs a different name so we give it a suffix showing the number of arguments
-      sq.udf.register("run2",
-        (s: PortableImagePlus, cmd: String, args: String) =>
-          s.run(cmd,args)
-      )
+    def registerImageJ(implicit fs: ImageJSettings): Unit = SQLFunctions.registerImageJ(sq,fs)
 
-      sq.udf.register("run",
-        (s: PortableImagePlus, cmd: String) =>
-          s.run(cmd)
-      )
-
-      sq.udf.register("stats",
-        (s: PortableImagePlus) =>
-          s.getImageStatistics()
-      )
-
-      sq.udf.register("mean",
-        (s: PortableImagePlus) =>
-          s.getMeanValue() //TODO switch to standard statistics
-      )
-
-      sq.udf.register("shape",(s: PortableImagePlus) =>
-        s.analyzeParticles().toString() //TODO make shape an udt as well
-
-      )
-
-      sq.udf.register("subtract",(s: PortableImagePlus, t: PortableImagePlus) => s.subtract(t))
-
-      sq.udf.register("scale",(s: PortableImagePlus, scFactor: Double) => s.multiply(scFactor))
-
-      sq.udf.register("hist",(s: PortableImagePlus) => new HistogramCC(s.getHistogram()))
-
-      sq.udf.register("hist3",
-        (s: PortableImagePlus, minVal: Double, maxVal: Double, bins: Int) =>
-        new HistogramCC(
-          s.getHistogram(
-            Some((minVal,maxVal)),
-            bins)
-        )
-      )
-
-      sq.udf.register("hist_compare",(s1: PortableImagePlus, s2: PortableImagePlus) =>
-        (s1.getHistogram()-s2.getHistogram())
-      )
-
-      //TODO add some io and other useful operations here
-      //TODO add analyze particles
-    }
-
-    def registerDebugFunctions() = {
-
-      sq.udf.register("tostring",(s: AnyRef) => s.toString)
-
-    }
+    def registerDebugFunctions() = SQLFunctions.registerDebugFunctions(sq)
   }
 
 
