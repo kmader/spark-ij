@@ -78,7 +78,7 @@ class DDLTests extends FunSuite with Matchers with LocalSparkContext {
       tfi.schema(7).name shouldBe "image"
 
       val oTab = sq.sql("SELECT name,width,height,slices FROM DebugImages")
-      oTab.foreach(println(_))
+      oTab.collect.foreach(println(_))
       oTab.count shouldBe 7
     }
 

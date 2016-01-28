@@ -3,6 +3,7 @@ package ch.fourquant.images.types
 import fourquant.imagej.ImagePlusIO.ImageLog
 import fourquant.imagej.PortableImagePlus
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter
 import org.apache.spark.sql.catalyst.expressions.{MutableRow, GenericInternalRow, GenericMutableRow}
 import org.apache.spark.sql.{Row, types}
 import org.apache.spark.sql.types.{StringType, StructField, StructType, UserDefinedType}
@@ -13,22 +14,34 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType, UserDefi
  * the array is just an object which will then be recognized by the array to imageplus conversion
  */
 class PipUDT extends UserDefinedType[PortableImagePlus] {
+
+  private[PipUDT] case class CustomType(cls: Class[_]) extends types.DataType {
+    override def defaultSize: Int =
+      throw new UnsupportedOperationException("No size estimation available for objects.")
+
+    def asNullable: types.DataType = this
+  }
+
+  private[PipUDT] val PipType = CustomType(classOf[PortableImagePlus])
+
   /** some serious cargo-cult, no idea hwo this is actually used **/
   override def sqlType: StructType = {
     StructType(
       Seq(
         StructField("jsonlog",StringType, nullable=false),
-        StructField("array",types.BinaryType,nullable=false)
+        StructField("array",PipType,nullable=false)
       )
     )
   }
 
-  override def serialize(obj: Any): MutableRow = {
+  override def serialize(obj: Any): InternalRow = {
+
     val row = new GenericMutableRow(2)
     obj match {
       case pData: PortableImagePlus =>
-        row.update(0,pData.imgLog.toJSONString)
-        row.update(1,pData.getArray)
+        import ch.fourquant.images.types.implicits._
+        row.setString(0,pData.imgLog.toJSONString)
+        row.update(1,pData)
         row
       case cRow: MutableRow =>
         System.err.println(s"Something strange happened, or was already serialized: ${cRow}")
@@ -48,9 +61,10 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
         v
       case r: InternalRow =>
         require(r.numFields==2,"Wrong row-length given "+r.numFields+" instead of 2")
-        val ilog = ImageLog.fromJSONString( r.getString(0))
-        val inArr = r.get(1,types.BinaryType) //TODO this currently maps to getAs, but this will probably change
-        new PortableImagePlus(Right(inArr),ilog)
+        val ilog = ImageLog.fromJSONString( r.getUTF8String(0).toString) //TODO fix conversion error
+        //TODO this currently maps to getAs, but this will probably change
+        r.get(1,PipType).asInstanceOf[PortableImagePlus]
+      //new PortableImagePlus(Right(inArr),ilog)
     }
   }
 
