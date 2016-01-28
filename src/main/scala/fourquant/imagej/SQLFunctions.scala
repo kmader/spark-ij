@@ -1,5 +1,7 @@
 package fourquant.imagej
 
+import java.io.Serializable
+
 import ch.fourquant.images.types.HistogramCC
 import fourquant.imagej.ImageJSettings
 import org.apache.spark.sql.SQLContext
@@ -12,6 +14,7 @@ object SQLFunctions extends Serializable {
   /**
     * The collection of functions added to SQL for dealing with ImageJ functionality. This is made so there will
     * automatically be a documented list of them.
+ *
     * @author Kevin Mader
     * @note  TODO add some io and other useful operations here
     * @note TODO add analyze particles
@@ -20,6 +23,7 @@ object SQLFunctions extends Serializable {
   object udfs extends Serializable {
     /**
       * Run's an imagej plugin (macro style) on an image with arguments
+ *
       * @param s the image to process (as [[PortableImagePlus]]
       * @param cmd the plugin or command name to run
       * @param args the arguments to give this plugin
@@ -29,6 +33,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Run a plugin without arguments on a given image
+ *
       * @param s the image to run the plugin on
       * @param cmd the name of the plugin / operation
       * @return a new image after this has been performed (duplicated)
@@ -37,6 +42,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Run a function on an image and return the ResultsTable
+ *
       * @param s the image to process
       * @param cmd the plugin to run
       * @param args the arguments to give it (can be empty)
@@ -47,6 +53,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Get the statistics of the current image
+ *
       * @param s the image
       * @return an [[ImageStatistics]] with the information.
       */
@@ -55,6 +62,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Calculate the mean of an image
+ *
       * @param s the current image
       * @return the mean values as double
       *         TODO switch to standard statistics
@@ -63,6 +71,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Run a shape (component-labeling based) on the image
+ *
       * @param s
       * @return a string with all the shape information
       *         TODO make shape an udt as well
@@ -72,6 +81,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Calculates the absolute difference between two images
+ *
       * @param s the input image
       * @param t the image to subtract
       * @return a new image [[PortableImagePlus]] with the result
@@ -81,6 +91,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Scale the image by a factor
+ *
       * @param s the image to scale
       * @param scFactor the factor to scale by
       * @return a new image with the scaling
@@ -89,6 +100,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Calculate the histogram of the given image using an automatically determined bin collection
+ *
       * @param s the input image to run on
       * @return a histogram in the form of [[HistogramCC]] taken on the [[PortableImagePlus.getArray()]]
       */
@@ -96,6 +108,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Calculate a histgram with a fixed bin set on the current image
+ *
       * @param s the image to calculate the histogram on
       * @param minVal the minimum value
       * @param maxVal the maximum value
@@ -111,6 +124,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Compare the histogram of two images by bin-wise differences
+ *
       * @param s1 the base image
       * @param s2 the image to compare it to
       * @return the difference between the bins
@@ -123,10 +137,12 @@ object SQLFunctions extends Serializable {
 
   /**
     * add all the needed imagej related udfs to the sqlcontext
+ *
     * @param sq the sqlcontext to add the functions to
     * @param fs the base imagejsettings to ensure it has been properly initialized
     */
   def registerImageJ(sq: SQLContext, fs: ImageJSettings): Unit = {
+
     sq.udf.register("run2", (a: PortableImagePlus, cmd: String,args: String) =>  udfs.run2(a,cmd,args))
     sq.udf.register("run", (a: PortableImagePlus, cmd: String) => udfs.run(a,cmd))
     sq.udf.register("runtable", (a: PortableImagePlus, cmd: String, args: String) => udfs.runtable(a,cmd,args))
@@ -158,6 +174,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Extract a given column from a table
+ *
       * @param s the name of the table
       * @param colName the column to read out
       * @return the column as an array of
@@ -176,6 +193,7 @@ object SQLFunctions extends Serializable {
   }
   /**
     * Add the debugging functions to the context
+ *
     * @param sq
     * @return
     */
