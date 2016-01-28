@@ -29,7 +29,7 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
     StructType(
       Seq(
         StructField("jsonlog",StringType, nullable=false),
-        StructField("array",PipType,nullable=false)
+        StructField("array",types.BinaryType,nullable=false)
       )
     )
   }
@@ -41,7 +41,7 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
       case pData: PortableImagePlus =>
         import ch.fourquant.images.types.implicits._
         row.setString(0,pData.imgLog.toJSONString)
-        row.update(1,pData)
+        row.update(1,SerDeserHelper.bytify(pData).get)
         row
       case cRow: MutableRow =>
         System.err.println(s"Something strange happened, or was already serialized: ${cRow}")
@@ -62,8 +62,8 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
       case r: InternalRow =>
         require(r.numFields==2,"Wrong row-length given "+r.numFields+" instead of 2")
         val ilog = ImageLog.fromJSONString( r.getUTF8String(0).toString) //TODO fix conversion error
-        //TODO this currently maps to getAs, but this will probably change
-        r.get(1,PipType).asInstanceOf[PortableImagePlus]
+        //TODO this is really inefficient, but the code generation aspect of catalyst wont take anything else
+        SerDeserHelper.debytify(r.getBinary(1)).get.asInstanceOf[PortableImagePlus]
       //new PortableImagePlus(Right(inArr),ilog)
     }
   }
