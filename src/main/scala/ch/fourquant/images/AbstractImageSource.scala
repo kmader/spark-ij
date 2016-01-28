@@ -3,7 +3,7 @@ package ch.fourquant.images
 import ch.fourquant.images.types.{NamedSQLImage, FullSQLImage}
 import fourquant.imagej.{PortableImagePlus => PIP}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.ScalaReflection
+import org.apache.spark.sql.catalyst.{InternalRow, ScalaReflection}
 import org.apache.spark.sql.execution.RDDConversions
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.StructType
@@ -46,6 +46,7 @@ abstract class AbstractImageSource
   }
   override def createRelation(sq: SQLContext, mode: SaveMode, parameters: Map[String,
     String], data: DataFrame): BaseRelation = {
+
     parameters.get("path") match {
       case Some(path) => makeRelation(sq,path,parameters)
       case None => throw new SparkException("Path is needed for creation")
@@ -91,7 +92,8 @@ object AbstractImageSource extends Serializable {
 
 /**
  * This is a very basic implementation of the BaseRelation for Images.
- * @param baseRDD
+  *
+  * @param baseRDD
  * @param pipToProd
  * @param sqlContext
  * @tparam A The type parameter allows for the exact specification of the table to be flexibly
@@ -106,12 +108,13 @@ case class AbstractImageRelation[A <: Product : TypeTag : ClassTag] protected[fo
   //TODO the typetag creates serialization problems in execution, fix this
   override def schema = ScalaReflection.schemaFor[A].dataType.asInstanceOf[StructType]
 
-  override def buildScan(): RDD[Row] =
-    RDDConversions.productToRowRdd(
-      baseRDD().map(iv => pipToProd(iv._1,iv._2)),
-      schema.map(_.dataType)
-    )
+  override def buildScan(): RDD[Row] = {
 
+    baseRDD().map(iv => pipToProd(iv._1, iv._2))
+      .map(Row.fromTuple(_))
+    // schema.map(_.dataType)
+
+  }
 }
 
 case class SimpleImageRelation protected[fourquant](
@@ -121,9 +124,9 @@ case class SimpleImageRelation protected[fourquant](
   override def schema = ScalaReflection.schemaFor[NamedSQLImage].dataType.asInstanceOf[StructType]
 
   override def buildScan(): RDD[Row] =
-    RDDConversions.productToRowRdd(
-      baseRDD().map(iv => NamedSQLImage(iv._1,iv._2)),
-      schema.map(_.dataType)
-    )
+    //RDDConversions.productToRowRdd(
+      baseRDD().map(iv => NamedSQLImage(iv._1,iv._2)).map(Row.fromTuple(_))
+      //schema.map(_.dataType)
+    //)
 
 }

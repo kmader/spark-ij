@@ -3,7 +3,7 @@ package fourquant.imagej
 import ch.fourquant.images.types.HistogramCC
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.io.hadoop.ByteOutputFormat
-import ij.{ImagePlus, ImageStack}
+import ij.{IJ, ImagePlus, ImageStack}
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, NullWritable}
 import org.apache.hadoop.mapred.JobConf
@@ -24,67 +24,23 @@ trait FijiInit {
 
 /**
  * Tools for making previewing and exploring data in FIJI from Spark easy
- * @author mader
+  *
+  * @author mader
  *
  */
 object scOps {
 
   def StartFiji(ijPath: String, show: Boolean = false,
-                 runLaunch: Boolean = true, record: Boolean = true): Unit = {
-    Spiji.start(ijPath, show,runLaunch)
-    if(record) Spiji.startRecording()
-  }
-
-  val forceHeadless = false
-
-
-  /**
-   * A class which hangs around and keeps all of the imagej settings (so they can be sent to
-   * workers)
-   * @param showGui
-   * @param ijPath
-   */
-  case class ImageJSettings(ijPath: String,
-                            showGui: Boolean = false,
-                           runLaunch: Boolean = true,
-                           record: Boolean = false
-                             ) extends FijiInit {
-    /**
-      * The initial number of partitions to create
-      * @return default is 30, but can be overridden for other cluster configurations
-      */
-    def initPartitionCount() = 30
-
-    /**
-      * The number of elements in the first grouping, the elements are divided over initPartitionCount partitions
-      * @return per default 100 but can be lower for many cases
-      */
-    def initElementCount() = 100
-
-    def setupSpark(sc: SparkContext, partRun: Boolean = false) = {
-      if(!showGui) {
-        if (forceHeadless) IJGlobal.forceHeadless();
-        sc.setLocalProperty("java.awt.headless","false")
-      }
-      sc.parallelize(1 to initPartitionCount,initElementCount).
-        mapPartitions{
-        ip =>
-          setupFiji()
-          ip
-      }.collect()
-    }
-
-    override def setupFiji() = {
-      if(!showGui) {
-        if (forceHeadless) IJGlobal.forceHeadless();
-        System.setProperty("java.awt.headless","false")
-      }
-      StartFiji(ijPath,showGui,runLaunch,record)
-    }
+                runLaunch: Boolean = true, record: Boolean = true): Unit = {
+    Spiji.start(ijPath, show, runLaunch)
+    if (record) Spiji.startRecording()
   }
 
 
-  def SetupImageJInPartition(ijs: ImageJSettings): Unit = ijs.setupFiji
+
+
+
+def SetupImageJInPartition(ijs: ImageJSettings): Unit = ijs.setupFiji
 
 
   def loadImages(path: String, partitions: Int)(implicit sc: SparkContext,
@@ -95,7 +51,8 @@ object scOps {
   /**
    * Push the list of images from the driver machine to the Spark Cluster (only if they are not
    * available on the cluster / shared file system
-   * @param paths
+    *
+    * @param paths
    * @param ijs imagej setup information
    * @param parallel load images on driver machine in parallel (much faster)
    * @return a list of images in an RDD
@@ -143,7 +100,8 @@ object scOps {
 
     /**
      * to load images available on a local (shared with all workers) filesystem
-     * @param paths the list of paths to open
+      *
+      * @param paths the list of paths to open
      * @param partitions desired partition count
      * @param ijs settings for configuring imagej
      * @return imageplus rdd
@@ -168,7 +126,8 @@ object scOps {
     /**
      * load images which are only available on the driver machine to the cluster (useful in cloud
      * situtations where much of the data is located locally)
-     * @param paths list of files to load
+      *
+      * @param paths list of files to load
      * @param partitions number of partitions of the data on the cluster
      * @param parallel use a parallel array map implementation to load with multiple threads on
      *                 the driver (might be unsafe for some filetypes
@@ -219,14 +178,16 @@ object scOps {
 
   /**
    * Just the operations on the imageplus objects
-   * @param inRDD
+    *
+    * @param inRDD
    * @tparam A
    * @tparam B
    */
   implicit class ijOpsRDD[A : ClassTag,B <: PortableImagePlus : ClassTag](inRDD: RDD[(A,B)]) {
     /**
      * Runs the given command and arguments on all of the images in a list
-     * @param cmd the imagej macro-style command to run (example "Add Noise")
+      *
+      * @param cmd the imagej macro-style command to run (example "Add Noise")
      * @param args the arguments for the macro-style command (example "radius=3")
      * @return the updated images (lazy evaluated)
      */
@@ -272,7 +233,8 @@ object scOps {
 
   /**
    * The IO operations for an ImageJ based RDD object
-   * @param inRDD the RDD containing the images
+    *
+    * @param inRDD the RDD containing the images
    * @tparam A the type of the key (usually string or path, can also contain identifiers)
    * @tparam B portableimageplus or a subclass
    */
@@ -281,7 +243,8 @@ object scOps {
      * The command to save images (if path does not contain a url hdfs://, s3://, http://) the
      * file is saved using the saveImagesLocal where the path will be prepended (best if it is
      * empty)
-     * @note path must contain and ending seperator for local operation
+      *
+      * @note path must contain and ending seperator for local operation
      *       @note if (A) contains an hadoop path this save will not work since all the files
      *             have to be in the same path
      * @param suffix the suffix to append so imagej knows the filetype
@@ -295,7 +258,8 @@ object scOps {
     }
     /**
      * Saves the images locally using ImageJ
-     * @param suffix text to add to the existing path
+      *
+      * @param suffix text to add to the existing path
      */
     protected[imagej] def saveImagesLocal(suffix: String)(implicit fs: ImageJSettings) = {
       inRDD.foreachPartition{
@@ -310,7 +274,8 @@ object scOps {
 
     /**
      * Save images in a hadoop style using a directory with subnames (part-0000 ...),
-     * @note these files have no extension so the filenames/ metadata should be stored elsewhere
+      *
+      * @note these files have no extension so the filenames/ metadata should be stored elsewhere
      *       @note it is recommended to use saveImageLocal for most cases
      * @param path the folder to write the images too
      * @param newSuffix the suffix (for writing the correct filetype
@@ -371,10 +336,21 @@ object scOps {
   implicit def ImagePlusToPortableImagePlus(imp: ImagePlus) = new PortableImagePlus(imp)
 
   implicit class ImageJFriendlySQLContext(sq: SQLContext) {
-    /** add all the needed udfs to the sqlcontext **/
-    def registerImageJ(implicit fs: ImageJSettings): Unit = SQLFunctions.registerImageJ(sq,fs)
+    /**
+      * setup imagej in all instances and register plugins
+      *
+      * @param fs
+      */
+    def registerImageJ(implicit fs: ImageJSettings): Unit = {
+      fs.setupSpark(sq.sparkContext)
+      registerImageJFunctions(fs)
+    }
 
-    def registerDebugFunctions() = SQLFunctions.registerDebugFunctions(sq)
+    /** add all the needed udfs to the sqlcontext **/
+    def registerImageJFunctions(implicit fs: ImageJSettings): Unit = {
+      SQLFunctions.registerImageJ(sq,fs)
+      SQLFunctions.registerDebugFunctions(sq,fs)
+    }
   }
 
 

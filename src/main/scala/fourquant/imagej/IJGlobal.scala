@@ -2,7 +2,7 @@ package fourquant.imagej
 
 import java.awt.GraphicsEnvironment
 
-import fourquant.imagej.scOps.ImageJSettings
+import fourquant.imagej.ImageJSettings
 
 
 /**

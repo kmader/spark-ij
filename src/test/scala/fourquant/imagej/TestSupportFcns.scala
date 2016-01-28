@@ -16,6 +16,8 @@ object TestSupportFcns extends Serializable {
   val ijs = ImageJSettings("/Applications/Fiji.app/", showGui = false, runLaunch = false, record
     = false)
 
+  val headlessIJ = ImageJSettings("/",showGui = false, runLaunch = false, record=false, forceHeadless = true)
+
   def makeTestImages(sc: SparkContext, fact: Int = 1,
                      imgs: Int, width: Int, height: Int) =
     sc.createEmptyImages("/Users/mader/imgs/", imgs, width, height,

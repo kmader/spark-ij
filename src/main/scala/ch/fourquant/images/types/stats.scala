@@ -2,7 +2,8 @@ package ch.fourquant.images.types
 
 import fourquant.imagej.{IJResultsTable, IJHistogram, ImageStatistics}
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.{MutableRow, GenericMutableRow}
 import org.apache.spark.sql.types._
 /**
  * If it has the same name, some scalac things get angry, probably a bug of some sorts
@@ -30,7 +31,7 @@ class IJResultsTableUDT extends UserDefinedType[IJResultsTable] {
     )
   }
 
-  override def serialize(obj: Any): Row = {
+  override def serialize(obj: Any): InternalRow = {
     val row = new GenericMutableRow(5)
     obj match {
       case pData: IJResultsTable =>
@@ -44,11 +45,12 @@ class IJResultsTableUDT extends UserDefinedType[IJResultsTable] {
 
   override def deserialize(datum: Any): IJResultsTable = {
     datum match {
-      case r: Row =>
-        require(r.length==2,"Wrong row-length given "+r.length+" instead of 2")
+      case r: InternalRow =>
+        require(r.numFields==2,"Wrong row-length given "+r.numFields+" instead of 2")
+
         IJResultsTable(
-          r.getAs[Array[String]]("header"),
-          r.getAs[Array[Array[Double]]]("rows")
+          r.getArray(0).toArray[String](StringType),
+          r.getArray(1).array.asInstanceOf[Array[Array[Double]]]
         )
       case _ =>
         throw new RuntimeException("The given object:"+datum+" cannot be deserialized by "+this)
@@ -86,7 +88,7 @@ class ImageStatisticsUDT extends UserDefinedType[ImageStatistics] {
     )
   }
 
-  override def serialize(obj: Any): Row = {
+  override def serialize(obj: Any): MutableRow = {
     val row = new GenericMutableRow(5)
     obj match {
       case pData: ImageStatistics =>
@@ -103,8 +105,8 @@ class ImageStatisticsUDT extends UserDefinedType[ImageStatistics] {
 
   override def deserialize(datum: Any): ImageStatistics = {
     datum match {
-      case r: Row =>
-        require(r.length==5,"Wrong row-length given "+r.length+" instead of 5")
+      case r: InternalRow =>
+        require(r.numFields==5,s"Wrong row-length given ${r.numFields} instead of 5")
 
         ImageStatistics(r.getDouble(0),r.getDouble(1),r.getDouble(2),r.getDouble(3),r.getLong(4))
       case _ =>

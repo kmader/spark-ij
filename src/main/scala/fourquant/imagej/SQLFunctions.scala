@@ -1,7 +1,7 @@
 package fourquant.imagej
 
 import ch.fourquant.images.types.HistogramCC
-import fourquant.imagej.scOps.ImageJSettings
+import fourquant.imagej.ImageJSettings
 import org.apache.spark.sql.SQLContext
 
 /**
@@ -165,17 +165,26 @@ object SQLFunctions extends Serializable {
       */
     def fromtable(s: IJResultsTable, colName: String) =
       s.getColumn(colName).map(_.toArray).getOrElse(new Array[Double](0))
+
+    import scala.collection.JavaConversions._
+    def listplugins()(implicit fs: ImageJSettings) =
+      ij.Menus.getCommands.entrySet().toList.map(kv => s"${kv.getKey} => ${kv.getValue}").toArray
+
+    def listcommands()(implicit fs: ImageJSettings) =
+      ij.Menus.getCommands.entrySet().toList.map(kv => s"${kv.getKey}").toArray
+
   }
   /**
     * Add the debugging functions to the context
     * @param sq
     * @return
     */
-  def registerDebugFunctions(sq: SQLContext) = {
-
+  def registerDebugFunctions(sq: SQLContext,fs: ImageJSettings) = {
+    implicit val ijs = fs
     sq.udf.register("tostring",(a: AnyRef) =>debugUdfs.tostring(a))
     sq.udf.register("fromtable",(a: IJResultsTable, b: String) => debugUdfs.fromtable(a,b))
-
+    sq.udf.register("listplugins", () => debugUdfs.listplugins() )
+    sq.udf.register("listcommands", () => debugUdfs.listcommands() )
   }
 
 }

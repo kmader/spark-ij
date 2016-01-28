@@ -1,6 +1,6 @@
 package ch.fourquant.images
 
-import fourquant.imagej.TestSupportFcns
+import fourquant.imagej.{scOps, TestSupportFcns}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{LocalSparkContext, SparkContext}
@@ -12,13 +12,26 @@ import org.scalatest.{FunSuite, Matchers}
 class DDLTests extends FunSuite with Matchers with LocalSparkContext {
 
   val sc = getNewSpark("local[4]", "DDLTests")
-  implicit val ijs = TestSupportFcns.ijs
+  //implicit val ijs = TestSupportFcns.ijs
   val contextList = Array(
-    ("SparkSQL",(iv: SparkContext) => new SQLContext(iv)), // test standard sparksql
-    ("HiveQL",(iv: SparkContext) => new HiveContext(sc)) // text hiveql
+    ("SparkSQL",(iv: SparkContext) => new SQLContext(iv), TestSupportFcns.ijs), // test standard sparksql
+    ("HiveQL",(iv: SparkContext) => new HiveContext(sc), TestSupportFcns.ijs) // text hiveql
   )
-  for ((cmName,contextMapping) <- contextList) {
+  for ((cmName,contextMapping, curIjs) <- contextList) {
     val sq = contextMapping(sc)
+
+    test(s"$cmName : Listing all plugins") {
+      import scOps._
+
+      sq.registerImageJ(curIjs)
+
+      val plugList = sq.sql("SELECT listplugins()")
+      plugList.count shouldBe 1
+
+      val outList = plugList.first().getList[String](0)
+      outList.toArray.foreach(println(_))
+      outList.size() should be > 100
+    }
 
 
     test(cmName + ": Create Database Test") {
@@ -43,6 +56,8 @@ class DDLTests extends FunSuite with Matchers with LocalSparkContext {
       oTab.foreach(println(_))
 
       oTab.count shouldBe 7
+
+
 
     }
 

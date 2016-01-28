@@ -2,7 +2,8 @@ package ch.fourquant.images.types
 
 import fourquant.imagej.ImagePlusIO.ImageLog
 import fourquant.imagej.PortableImagePlus
-import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.{MutableRow, GenericInternalRow, GenericMutableRow}
 import org.apache.spark.sql.{Row, types}
 import org.apache.spark.sql.types.{StringType, StructField, StructType, UserDefinedType}
 
@@ -22,14 +23,14 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
     )
   }
 
-  override def serialize(obj: Any): Row = {
+  override def serialize(obj: Any): MutableRow = {
     val row = new GenericMutableRow(2)
     obj match {
       case pData: PortableImagePlus =>
-        row.setString(0,pData.imgLog.toJSONString)
+        row.update(0,pData.imgLog.toJSONString)
         row.update(1,pData.getArray)
         row
-      case cRow: Row =>
+      case cRow: MutableRow =>
         System.err.println(s"Something strange happened, or was already serialized: ${cRow}")
         cRow
       case _ =>
@@ -38,15 +39,17 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
     }
   }
 
+
+
   override def deserialize(datum: Any): PortableImagePlus = {
     datum match {
       case v: PortableImagePlus =>
         System.err.println("Something strange happened, or was never serialized")
         v
-      case r: Row =>
-        require(r.length==2,"Wrong row-length given "+r.length+" instead of 2")
+      case r: InternalRow =>
+        require(r.numFields==2,"Wrong row-length given "+r.numFields+" instead of 2")
         val ilog = ImageLog.fromJSONString( r.getString(0))
-        val inArr = r.getAs[AnyRef](1)
+        val inArr = r.get(1,types.BinaryType) //TODO this currently maps to getAs, but this will probably change
         new PortableImagePlus(Right(inArr),ilog)
     }
   }
@@ -72,15 +75,15 @@ case class NamedSQLImage(sample: String, image: PortableImagePlus)
 
 /**
  * A slightly more detailed structure
- * @param path
+  *
+  * @param path
  * @param name
  * @param parent
  * @param fullpath
  * @param width the width
  * @param height the height
  * @param slices the number of slices (for 3d images)
- *
- * @param image the portableimageplus structure
+  * @param image the portableimageplus structure
  */
 case class FullSQLImage(path: String, name: String, parent: String,fullpath: Array[String],
                         width: Int, height: Int, slices: Int,
