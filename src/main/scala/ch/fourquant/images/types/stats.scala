@@ -4,6 +4,9 @@ import fourquant.imagej.{IJResultsTable, IJHistogram, ImageStatistics}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{MutableRow, GenericMutableRow}
+import org.apache.spark.sql.catalyst.util
+import org.apache.spark.sql.catalyst.util.{GenericArrayData, MapData}
+
 import org.apache.spark.sql.types._
 /**
  * If it has the same name, some scalac things get angry, probably a bug of some sorts
@@ -16,7 +19,7 @@ case class HistogramCC(bin_centers: Array[Double], bin_counts: Array[Int]) {
 
 
 /**
-  * the Sparksql user-defined type for the the ImageStatistics
+  * the Sparksql user-defined type for the the results table
   */
 class IJResultsTableUDT extends UserDefinedType[IJResultsTable] {
   //TODO add tests to make sure this is serialized in a sensible manner (also might be useful to restructure field
@@ -25,18 +28,27 @@ class IJResultsTableUDT extends UserDefinedType[IJResultsTable] {
   override def sqlType: StructType = {
     StructType(
       Seq(
-        StructField("header",ArrayType(StringType,false), nullable=false),
-        StructField("rows",ArrayType(ArrayType(DoubleType,false),false))
+        StructField("columns",MapType(StringType,ArrayType(DoubleType)))
       )
     )
   }
 
   override def serialize(obj: Any): InternalRow = {
-    val row = new GenericMutableRow(5)
+    val row = new GenericMutableRow(1)
     obj match {
       case pData: IJResultsTable =>
-        row.update(0,pData.header)
-        row.update(1,pData.rows.toArray)
+        //TODO stolen from VectorUDT, make a nicer one
+        val keys = pData.header.map(_.asInstanceOf[Any])
+
+        val rows = pData.header.map(rowName => {
+          val rowVals = pData.getColumn(rowName) match {
+            case Some(iArr) => iArr.toArray
+            case None => new Array[Double](0)
+          }
+          new GenericArrayData(rowVals.map(_.asInstanceOf[Any])).asInstanceOf[Any] // sparksql hates typed arrays
+        }) // since arrays are invariant in scala
+        val mapOutput = util.ArrayBasedMapData(keys,rows)
+        row.update(0, mapOutput)
       case _ =>
         throw new RuntimeException("The given object:"+obj+" cannot be serialized by "+this)
     }
@@ -46,11 +58,18 @@ class IJResultsTableUDT extends UserDefinedType[IJResultsTable] {
   override def deserialize(datum: Any): IJResultsTable = {
     datum match {
       case r: InternalRow =>
-        require(r.numFields==2,"Wrong row-length given "+r.numFields+" instead of 2")
+        require(r.numFields==1,"Wrong row-length given "+r.numFields+" instead of 1")
+        val outMap = r.getMap(0)
+
+        val header = outMap.keyArray().toArray[String](StringType).asInstanceOf[Array[String]]
+        // the arraydata / arraytype methods are horrendous and the data needs to be manually extracted and retyped
+        val rows = outMap.valueArray().toArray[ArrayType](ArrayType(DoubleType))
+          .asInstanceOf[Array[ArrayType]]
+            .map(_.asInstanceOf[util.ArrayData].toDoubleArray())
 
         IJResultsTable(
-          r.getArray(0).toArray[String](StringType),
-          r.getArray(1).array.asInstanceOf[Array[Array[Double]]]
+          header,
+          rows
         )
       case _ =>
         throw new RuntimeException("The given object:"+datum+" cannot be deserialized by "+this)

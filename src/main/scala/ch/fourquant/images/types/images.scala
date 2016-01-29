@@ -14,7 +14,7 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType, UserDefi
  * the array is just an object which will then be recognized by the array to imageplus conversion
  */
 class PipUDT extends UserDefinedType[PortableImagePlus] {
-
+  @deprecated("this never worked but appeared elegant for keeping more complicated data-structures","1.0")
   private[PipUDT] case class CustomType(cls: Class[_]) extends types.DataType {
     override def defaultSize: Int =
       throw new UnsupportedOperationException("No size estimation available for objects.")
