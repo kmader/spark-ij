@@ -29,7 +29,7 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
     StructType(
       Seq(
         StructField("jsonlog",StringType, nullable=false),
-        StructField("array",types.BinaryType,nullable=false)
+        StructField("fullimage",types.BinaryType,nullable=false)
       )
     )
   }
@@ -84,7 +84,7 @@ class PipUDT extends UserDefinedType[PortableImagePlus] {
 /**
  * A very simple construction for storing named sql images
  */
-case class NamedSQLImage(sample: String, image: PortableImagePlus)
+case class NamedSQLImage(path: String, image: PortableImagePlus)
 
 
 /**

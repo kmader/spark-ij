@@ -121,12 +121,9 @@ case class SimpleImageRelation protected[fourquant](
                                                      baseRDD: () => RDD[(String,PIP)]
                                                      )(@transient val sqlContext: SQLContext)
   extends BaseRelation with TableScan with Serializable {
-  override def schema = ScalaReflection.schemaFor[NamedSQLImage].dataType.asInstanceOf[StructType]
+  override def schema = ScalaReflection.schemaFor[FullSQLImage].dataType.asInstanceOf[StructType]
 
   override def buildScan(): RDD[Row] =
-    //RDDConversions.productToRowRdd(
-      baseRDD().map(iv => NamedSQLImage(iv._1,iv._2)).map(Row.fromTuple(_))
-      //schema.map(_.dataType)
-    //)
+      baseRDD().map(iv => new FullSQLImage(iv._1,iv._2)).map(Row.fromTuple(_))
 
 }

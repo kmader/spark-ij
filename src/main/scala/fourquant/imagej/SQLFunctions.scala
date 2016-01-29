@@ -2,7 +2,7 @@ package fourquant.imagej
 
 import java.io.Serializable
 
-import ch.fourquant.images.types.HistogramCC
+import ch.fourquant.images.types.{IJResultsTableUDT, HistogramCC}
 import fourquant.imagej.ImageJSettings
 import org.apache.spark.sql.SQLContext
 
@@ -21,6 +21,7 @@ object SQLFunctions extends Serializable {
     *
     */
   object udfs extends Serializable {
+
     /**
       * Run's an imagej plugin (macro style) on an image with arguments
  *
@@ -52,6 +53,32 @@ object SQLFunctions extends Serializable {
       s.runWithTable(cmd,args)._2
 
     /**
+      * Run a function on an image and return the ResultsTable as a map
+      *
+      * @param s the image to process
+      * @param cmd the plugin to run
+      * @param args the arguments to give it (can be empty)
+      * @return the table [[IJResultsTable]] as a java map
+      */
+    def runmap(s: PortableImagePlus, cmd: String, args: String) = {
+      s.runWithTable(cmd,args)._2.toMap
+
+    }
+
+    /**
+      * Run a function on an image and return the first row of the results table as a map
+      *
+      * @param s the image to process
+      * @param cmd the plugin to run
+      * @param args the arguments to give it (can be empty)
+      * @return the table [[IJResultsTable]] as a map
+      */
+    def runrow(s: PortableImagePlus, cmd: String, args: String) = {
+      s.runWithTable(cmd,args)._2.getRowValues(0).getOrElse(Map[String,Double]())
+    }
+
+
+    /**
       * Get the statistics of the current image
  *
       * @param s the image
@@ -81,7 +108,6 @@ object SQLFunctions extends Serializable {
 
     /**
       * Calculates the absolute difference between two images
- *
       * @param s the input image
       * @param t the image to subtract
       * @return a new image [[PortableImagePlus]] with the result
@@ -146,13 +172,15 @@ object SQLFunctions extends Serializable {
     sq.udf.register("run2", (a: PortableImagePlus, cmd: String,args: String) =>  udfs.run2(a,cmd,args))
     sq.udf.register("run", (a: PortableImagePlus, cmd: String) => udfs.run(a,cmd))
     sq.udf.register("runtable", (a: PortableImagePlus, cmd: String, args: String) => udfs.runtable(a,cmd,args))
+    sq.udf.register("runmap", (a: PortableImagePlus, cmd: String, args: String) => udfs.runmap(a,cmd,args))
+    sq.udf.register("runrow", (a: PortableImagePlus, cmd: String, args: String) => udfs.runrow(a,cmd,args))
     sq.udf.register("stats",(a: PortableImagePlus) => udfs.stats(a))
     sq.udf.register("mean",(a: PortableImagePlus) => udfs.mean(a))
     sq.udf.register("shape",(a: PortableImagePlus) => udfs.shape(a))
 
     sq.udf.register("subtract",(a: PortableImagePlus, b: PortableImagePlus) => udfs.subtract(a,b))
 
-    sq.udf.register("scale",(a: PortableImagePlus, scf: Double) =>udfs.scale(a,scf))
+    sq.udf.register("scale",(a: PortableImagePlus, scf: Double) => udfs.scale(a,scf))
 
     sq.udf.register("hist",(a: PortableImagePlus) => udfs.hist(a))
 
@@ -171,6 +199,14 @@ object SQLFunctions extends Serializable {
       * @return the string representation
       */
     def tostring(s: AnyRef) = s.toString
+
+    /**
+      * Show the calibration as a string for the current image
+      * @param s the image
+      * @return its calibration as a string
+      */
+    def showcalibration(s: PortableImagePlus) = s"(${s.getCalibration.toString})"
+
 
     /**
       * Extract a given column from a table
@@ -203,6 +239,7 @@ object SQLFunctions extends Serializable {
     sq.udf.register("fromtable",(a: IJResultsTable, b: String) => debugUdfs.fromtable(a,b))
     sq.udf.register("listplugins", () => debugUdfs.listplugins() )
     sq.udf.register("listcommands", () => debugUdfs.listcommands() )
+    sq.udf.register("showcalibration", (s: PortableImagePlus) => debugUdfs.showcalibration(s))
   }
 
 }

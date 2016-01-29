@@ -49,7 +49,7 @@ class OldBinaryFileRDD[T](
  * @param minPartitions
  * @tparam T
  */
-class BinaryFileRDD[T](
+class CustomBinaryFileRDD[T](
                         sc: SparkContext,
                         inputFormatClass: Class[_ <: StreamFileInputFormat[T]],
                         keyClass: Class[String],

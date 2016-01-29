@@ -232,7 +232,7 @@ public class Spiji {
      * The type of operations supported
      */
     public static enum PIPOps implements Serializable {
-            LOAD, SAVE, CREATE, RUN, MACRO, THRESHOLD, COMMENT, OTHER, MERGE, MERGE_STORE
+            LOAD, SAVE, CREATE, RUN, MACRO, THRESHOLD, COMMENT, OTHER, MERGE, MERGE_STORE, ADD
     }
 
     public static enum PIPTools implements Serializable {

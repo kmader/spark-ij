@@ -70,7 +70,7 @@ def SetupImageJInPartition(ijs: ImageJSettings): Unit = ijs.setupFiji
         parallelize(0 until imgs).
         map(
           i => (prefix+i.toString,
-          new PortableImagePlus(Array.fill[A](width, height)(indFun(i))))
+          new PortableImagePlus(Array.fill[A](width, height)(indFun(i)),new IJCalibration()))
       )
     }
 

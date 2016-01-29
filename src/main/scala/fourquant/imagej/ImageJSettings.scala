@@ -8,7 +8,8 @@ import org.apache.spark.SparkContext
   * workers)
   *
   * @param showGui
-  * @param ijPath
+  * @param ijPath location of fiji path
+  *
   */
 case class ImageJSettings(ijPath: String,
                           showGui: Boolean = false,
@@ -55,7 +56,7 @@ case class ImageJSettings(ijPath: String,
         if (IJ.getInstance()==null) {
           new ij.ImageJ(ij.ImageJ.NO_SHOW);
           if (IJ.getInstance()==null)
-            throw new IllegalArgumentException("No Instance of ImageJ Found and could not be started");
+            throw new IllegalArgumentException("No Instance of ImageJ Found and could not be started")
         }
         Some(IJ.getInstance())
       }

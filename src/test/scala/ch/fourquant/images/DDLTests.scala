@@ -57,8 +57,6 @@ class DDLTests extends FunSuite with Matchers with LocalSparkContext {
 
       oTab.count shouldBe 7
 
-
-
     }
 
     test(cmName + ": Create Abstract Table") {

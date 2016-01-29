@@ -7,6 +7,7 @@ import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.imagej.ParameterSweep.ImageJSweep
 import fourquant.imagej.Spiji.{PIPOps, PIPTools}
 import ij.ImagePlus
+import ij.measure.Calibration
 import ij.plugin.PlugIn
 import ij.plugin.filter.PlugInFilter
 import ij.process.ImageProcessor
@@ -17,20 +18,21 @@ import org.apache.spark.sql.types._
 /**
  * Since ImagePlus is not serializable this class allows for it to be serialized and thus used
  * in operations besides map in Spark.
- * @param baseData either an array of the correct type or an imageplus object
+  *
+  * @param baseData either an array of the correct type or an imageplus object
  */
 @SQLUserDefinedType(udt = classOf[PipUDT])
-class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
+class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
                         var imgLog: ImageLog) extends Serializable {
 
   val pipStoreSerialization = false
 
-
   /**
    * if only one entry is given, create a new log from the one entry
-   * @param logEntry single entry (usually creation)
+    *
+    * @param logEntry single entry (usually creation)
    */
-  def this(bd: Either[ImagePlus,AnyRef], logEntry: LogEntry) =
+  def this(bd: Either[ImagePlus,(IJCalibration,AnyRef)], logEntry: LogEntry) =
     this(bd,new ImageLog(logEntry))
 
   def this(inImage: ImagePlus, oldLog: ImageLog) =
@@ -41,10 +43,13 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
     this(inImage,new ImageLog(LogEntry.create(inImage)))
 
 
+  @deprecated("should not be used, since images should always have a log and calibration","1.0")
+  def this(inArray: AnyRef) =
+    this(Right((new IJCalibration(),inArray)), LogEntry.createFromArray("SpijiArray",inArray))
 
   @deprecated("should not be used, since images should always have a log","1.0")
-  def this(inArray: AnyRef) =
-    this(Right(inArray), LogEntry.createFromArray("SpijiArray",inArray))
+  def this(inArray: AnyRef, cal: Calibration) =
+    this(Right((new IJCalibration(cal),inArray)), LogEntry.createFromArray("SpijiArray",inArray))
 
   @deprecated("should only be used when a source is not known","1.0")
   def this(inProc: ImageProcessor) =
@@ -58,7 +63,11 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
   private def calcImg: ImagePlus =
     baseData match {
       case Left(tImg) => tImg
-      case Right(tArr) => Spiji.createImage(File.createTempFile("img","").getName,tArr,false)
+      case Right((calib,tArr)) => {
+        val oImage = Spiji.createImage(File.createTempFile("img","").getName,tArr,false)
+        oImage.setCalibration(calib)
+        oImage
+      }
     }
 
   private def calcArray: AnyRef =
@@ -66,13 +75,24 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
       case Left(tImg) =>
         Spiji.setTempCurrentImage(tImg)
         Spiji.getCurrentImage
-      case Right(tArr) => tArr
+      case Right(tArr) =>
+        tArr._2
     }
 
+  private def calcCalibration: IJCalibration =
+    baseData match {
+      case Left(tImg) =>
+        new IJCalibration(tImg.getCalibration())
+      case Right(tArr) =>
+        tArr._1
+    }
   lazy val curImg = calcImg
   lazy val curArr = calcArray
+  lazy val curCalibration = calcCalibration
+
   def getImg() = curImg
   def getArray() = curArr
+  def getCalibration = curCalibration
 
   override def toString(): String = {
     val nameFcn = (inCls: String) => this.getClass().getSimpleName()+"["+inCls+"]"
@@ -84,6 +104,7 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
 
   /**
     * Run a plugin and return a new image
+    *
     * @param cmd the name of the command
     * @param args the arguments (optional)
     * @return
@@ -97,6 +118,7 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
 
   /**
     * get the image and the table
+    *
     * @param cmd
     * @param args
     * @return an image and a table
@@ -114,12 +136,12 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
     curImg.runAsPlugin(cmd,args)
   }
 
-
-
   def getImageStatistics() = {
     import PortableImagePlus.implicits._
     curImg.getImageStatistics()
   }
+
+
 
 
   def getMeanValue() =
@@ -131,8 +153,48 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
   }
 
   /**
+    * Apply an operation to all image processors in an image
+ *
+    * @param procOp the operation to apply to each processor
+    */
+  @Experimental
+  def processorForEach(procOp: ((ImageProcessor) => ImageProcessor),logEntry: LogEntry) = {
+
+    val newImage = getImg().duplicate()
+    if (newImage.getNSlices() > 1) {
+      val cStack = newImage.getStack()
+      val nStack = newImage.createEmptyStack()
+      for(i <- 1 to getImg().getNSlices()) {
+       nStack.addSlice(procOp(cStack.getProcessor(i)))
+      }
+      newImage.setStack(nStack)
+      // stack process
+    } else {
+      newImage.setProcessor(procOp(newImage.getProcessor()))
+    }
+
+    val newLog = imgLog.appendAndCopy(logEntry)
+    new PortableImagePlus(newImage,imgLog)
+  }
+
+
+
+  /**
+    * Apply a fixed offset to an image
+    *
+    * @param offset shift the image by the given amount (default is for CT images)
+    * @return
+    */
+  @Experimental
+  def applyOffset(offset: Int = -1024) = {
+    val procOp = (ip: ImageProcessor) => {val np = ip.convertToFloatProcessor(); np.add(offset);  np}
+    processorForEach(procOp,LogEntry(PIPOps.ADD,PIPTools.IMAGEJ,offset.toString))
+  }
+
+  /**
    * Create a histogram for the given image
-   * @param range the minimum and maximum values for the histogram
+    *
+    * @param range the minimum and maximum values for the histogram
    * @param bins the number of bins
    * @return a histogram case class (compatible with SQL)
    */
@@ -142,7 +204,8 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
 
   /**
    * average two portableimageplus objects together
-   * @note works for floating point images of the same size
+    *
+    * @note works for floating point images of the same size
    * @param ip2 second image
    *            @param rescale is the rescaling factor for the combined pixels
    * @return new image with average values
@@ -167,15 +230,9 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
 
   @Experimental
   def multiply(rescale: Double): PortableImagePlus = {
-    val outProc = curImg.getProcessor.
-      duplicate().convertToFloatProcessor()
-    outProc.multiply(rescale)
-    new PortableImagePlus(outProc,
-      imgLog.appendAndCopy(
-        LogEntry(PIPOps.OTHER,PIPTools.SPARK,"multiply",
-          "rescale=%f".format(rescale))
-      )
-    )
+    val procOp = (ip: ImageProcessor) => {val np = ip.convertToFloatProcessor; np.multiply(rescale); np}
+    processorForEach(procOp,LogEntry(PIPOps.OTHER,PIPTools.SPARK,"multiply",
+      "rescale=%f".format(rescale)))
   }
 
   @Experimental
@@ -211,13 +268,16 @@ class PortableImagePlus(var baseData: Either[ImagePlus,AnyRef],
   @throws[IOException]("if the file doesn't exist")
   private def writeObject(oos: ObjectOutputStream): Unit = {
     oos.writeObject(imgLog)
+    oos.writeObject(curCalibration)
     oos.writeObject(curArr)
   }
   @throws[IOException]("if the file doesn't exist")
   @throws[ClassNotFoundException]("if the class cannot be found")
   private def readObject(in: ObjectInputStream): Unit =  {
     imgLog = in.readObject.asInstanceOf[ImageLog]
-    baseData = Right(in.readObject())
+    val calibration = in.readObject().asInstanceOf[IJCalibration]
+    val data = in.readObject()
+    baseData = Right((calibration,data))
   }
   @throws(classOf[ObjectStreamException])
   private def readObjectNoData: Unit = {
@@ -259,6 +319,7 @@ object PortableImagePlus extends Serializable {
 
       /**
         * A function to run a command and keep both the output image and the results table in a tuple
+        *
         * @return the image followed by the output table
         */
       def runWithTable(cmd: String, args: String = "") = {

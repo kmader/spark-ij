@@ -17,6 +17,20 @@ case class HistogramCC(bin_centers: Array[Double], bin_counts: Array[Int]) {
   def this(hist: IJHistogram) = this(hist.bin_centers,hist.counts)
 }
 
+object IJResultsTableUDT extends Serializable {
+  def toMap(pData: IJResultsTable) = {
+    val keys = pData.header.map(_.asInstanceOf[Any])
+
+    val rows = pData.header.map(rowName => {
+      val rowVals = pData.getColumn(rowName) match {
+        case Some(iArr) => iArr.toArray
+        case None => new Array[Double](0)
+      }
+      new GenericArrayData(rowVals.map(_.asInstanceOf[Any])).asInstanceOf[Any] // sparksql hates typed arrays
+    }) // since arrays are invariant in scala
+   util.ArrayBasedMapData(keys,rows)
+  }
+}
 
 /**
   * the Sparksql user-defined type for the the results table
@@ -38,17 +52,8 @@ class IJResultsTableUDT extends UserDefinedType[IJResultsTable] {
     obj match {
       case pData: IJResultsTable =>
         //TODO stolen from VectorUDT, make a nicer one
-        val keys = pData.header.map(_.asInstanceOf[Any])
-
-        val rows = pData.header.map(rowName => {
-          val rowVals = pData.getColumn(rowName) match {
-            case Some(iArr) => iArr.toArray
-            case None => new Array[Double](0)
-          }
-          new GenericArrayData(rowVals.map(_.asInstanceOf[Any])).asInstanceOf[Any] // sparksql hates typed arrays
-        }) // since arrays are invariant in scala
-        val mapOutput = util.ArrayBasedMapData(keys,rows)
-        row.update(0, mapOutput)
+        val mapOutput = IJResultsTableUDT.toMap(pData)
+          row.update(0, mapOutput)
       case _ =>
         throw new RuntimeException("The given object:"+obj+" cannot be serialized by "+this)
     }

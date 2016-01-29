@@ -158,7 +158,7 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
   test("Histogram Distance") {
     val noiseFree = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
     val noiseFreeShift =
-      new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(50))
+      new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(50),new IJCalibration())
     val noisyImage = noiseFree.run("Add Noise")
 
     val nfHist = noiseFree.getHistogram()
