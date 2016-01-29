@@ -315,7 +315,7 @@ object PortableImagePlus extends Serializable {
         //localImgCopy.copyAttributes(curImg)
         localImgCopy.setCalibration(oldCal.asCalibration(curImg))
 
-        println("ORIG:\t"+curImg.getCalibration()+"\nCOPY:\t"+localImgCopy.getCalibration())
+        //println("ORIG:\t"+curImg.getCalibration()+"\nCOPY:\t"+localImgCopy.getCalibration())
 
         Spiji.setTempCurrentImage(localImgCopy)
         cmd match {
@@ -339,7 +339,7 @@ object PortableImagePlus extends Serializable {
         //outImage.copyAttributes(curImg)
         outImage.setCalibration(oldCal.asCalibration(outImage))
 
-        println("ORIG:\t"+curImg.getCalibration()+"\nIOUT:\t"+outImage.getCalibration())
+        //println("ORIG:\t"+curImg.getCalibration()+"\nIOUT:\t"+outImage.getCalibration())
         outImage
       }
 
@@ -349,6 +349,7 @@ object PortableImagePlus extends Serializable {
         * @return the image followed by the output table
         */
       def runWithTable(cmd: String, args: String = "") = {
+        IJResultsTable.clearTable()
         (run(cmd,args),
           IJResultsTable.fromIJ())
       }

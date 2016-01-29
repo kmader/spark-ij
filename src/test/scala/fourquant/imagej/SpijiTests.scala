@@ -2,6 +2,7 @@ package fourquant.imagej
 
 import ch.fourquant.images.types.SerDeserHelper
 import fourquant.imagej.scOps._
+import ij.measure.Calibration
 import org.apache.spark.{LocalSparkContext, SparkContext}
 import org.scalatest.{FunSuite, Matchers}
 
@@ -97,11 +98,15 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
       tCalib.pixelWidth =   .99
       tCalib.pixelHeight = 0.98
       tCalib.pixelDepth = 0.97
+      tCalib.setFunction(Calibration.STRAIGHT_LINE,Array(0,-0.5),"Golds")
+      tCalib.make16BitCTable()
       tCalib.xOrigin =   .7
 
-      tCalib.setCTable(new Array[Float](65536),"Golds")
+      //tCalib.setCTable(new Array[Float](65536),"Golds")
 
       tCalib.setUnit("mm")
+
+      println(s"Before\t$tCalib")
       //tCalib.setValueUnit("Golds")
 
       val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),tCalib)
@@ -147,9 +152,9 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
       .runWithTable("Histogram")
 
     println(s"Header: ${outTable.header.mkString(",")}")
-
-
-
+    println(s"All Values\n${outTable.rows.map(_.mkString(",")).mkString("\n")}")
+    println(s"Area: ${outTable.getColumn("Area")}")
+    println(s"${outTable.toMap.mapValues(_.mkString(",")).mkString("\n")}")
   }
 
 

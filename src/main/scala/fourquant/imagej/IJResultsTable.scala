@@ -2,8 +2,12 @@ package fourquant.imagej
 
 
 import ch.fourquant.images.types.{IJResultsTableUDT, ImageStatisticsUDT}
+import ij.plugin.filter.Analyzer
 import ij.{ImagePlus, WindowManager}
 import org.apache.spark.sql.types
+
+import scala.collection.mutable
+import scala.util.Try
 
 /**
   * Created by mader on 1/28/15.
@@ -101,8 +105,36 @@ object IJResultsTable {
     fromIJ()
   }
 
+  /**
+    * Clear the table before running an analysis
+    */
+  def clearTable() = {
+    Analyzer.getResultsTable.reset()
+  }
   def fromIJ() = {
+    val rt = Analyzer.getResultsTable
+    val omm = mutable.Map[String,Array[Double]]()
+    var i = 0
+    while(rt.columnExists(i)) {
+      val colName = rt.getColumnHeading(i)
+      val colVals = rt.getColumnAsDoubles(i)
+      omm(colName)=colVals
+      i+=1
+
+    }
+    val colNames = omm.keys.toArray
+    val rowCount = omm.values.head.length
+    // a mutable state free way of generating this list
+    val rowValues = for(row <- 0 until rowCount;
+                        outRow = for ((nkey,ncol) <- omm) yield Try{ncol(row)}.getOrElse(0.0)
+    ) yield (outRow.toArray)
+
+    IJResultsTable(colNames,rowValues) //TODO rewrite this to not need the silly row-based format
+  }
+  @deprecated("should not be used since it's implementation is buggy")
+  def fromSpiji() = {
     val header = Spiji.getListColumns()
+
     val rows = Spiji.getResultsTable().asInstanceOf[Array[Array[Double]]].toIndexedSeq
 
     IJResultsTable(header,rows)

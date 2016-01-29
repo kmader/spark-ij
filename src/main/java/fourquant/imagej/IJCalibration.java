@@ -102,6 +102,7 @@ public class IJCalibration implements Cloneable, Serializable {
         out.pixelWidth = pixelWidth;
         out.pixelDepth = pixelDepth;
         out.pixelHeight = pixelHeight;
+
         out.frameInterval = frameInterval;
         out.fps = fps;
         out.info = info;
@@ -112,6 +113,10 @@ public class IJCalibration implements Cloneable, Serializable {
         out.zOrigin = zOrigin;
 
         out.setCTable(cTable,valueUnit);
+        out.setUnit(unit);
+        out.setYUnit(yunit);
+        out.setZUnit(zunit);
+
         return out;
     }
 
@@ -128,7 +133,7 @@ public class IJCalibration implements Cloneable, Serializable {
         info = oldCalib.info;
 
         if (oldCalib.getCoefficients()!=null) {
-            coefficients = oldCalib.getCoefficients().clone();
+            coefficients = oldCalib.getCoefficients();
         }
 
         xOrigin = oldCalib.xOrigin;
@@ -143,7 +148,7 @@ public class IJCalibration implements Cloneable, Serializable {
         function = oldCalib.getFunction();
 
         if (oldCalib.getCTable()!=null) {
-            cTable = oldCalib.getCTable();
+            setCTable(oldCalib.getCTable(),oldCalib.getValueUnit());
         }
 
         invertedLut = false;

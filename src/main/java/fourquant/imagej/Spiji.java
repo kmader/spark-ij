@@ -694,6 +694,8 @@ public class Spiji {
         return strings;
     }
 
+
+
     /**
      * Returns the instance of the ResultsTable.
      *
@@ -701,6 +703,7 @@ public class Spiji {
      */
     public static Object getResultsTable() {
         ResultsTable rt = Analyzer.getResultsTable();
+
         int col = 0;
         int[] index = new int[ResultsTable.MAX_COLUMNS];
         for (int cnt = 0; cnt < ResultsTable.MAX_COLUMNS; cnt++) {
@@ -709,6 +712,7 @@ public class Spiji {
                 col++;
             }
         }
+
         int counter = rt.getCounter();
         double[][] results = new double[counter][col];
         for (int i = 0; i < col; i++) {
