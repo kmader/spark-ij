@@ -14,7 +14,7 @@ import java.io.Serializable;
 
 /** Calibration objects contain an image's spatial and density calibration data. */
 
-public class IJCalibration extends Calibration implements Cloneable, Serializable {
+public class IJCalibration implements Cloneable, Serializable {
 
     public static final int STRAIGHT_LINE=0,POLY2=1,POLY3=2,POLY4=3,
             EXPONENTIAL=4,POWER=5,LOG=6,RODBARD=7,GAMMA_VARIATE=8, LOG2=9, RODBARD2=10,
@@ -95,6 +95,30 @@ public class IJCalibration extends Calibration implements Cloneable, Serializabl
         }
     }
 
+    public Calibration asCalibration(ImagePlus dummyImage) {
+        final Calibration out = new Calibration();
+        out.setImage(dummyImage);
+
+        out.pixelWidth = pixelWidth;
+        out.pixelDepth = pixelDepth;
+        out.pixelHeight = pixelHeight;
+        out.frameInterval = frameInterval;
+        out.fps = fps;
+        out.info = info;
+        out.setFunction(function,coefficients,valueUnit);
+
+        out.xOrigin = xOrigin;
+        out.yOrigin = yOrigin;
+        out.zOrigin = zOrigin;
+
+        out.setCTable(cTable,valueUnit);
+        return out;
+    }
+
+    @Deprecated
+    public IJCalibration() {
+
+    }
     public IJCalibration(Calibration oldCalib) {
         pixelWidth = oldCalib.pixelWidth;
         pixelDepth = oldCalib.pixelDepth;
@@ -117,22 +141,16 @@ public class IJCalibration extends Calibration implements Cloneable, Serializabl
         valueUnit = oldCalib.getValueUnit();
         timeUnit = oldCalib.getTimeUnit();
         function = oldCalib.getFunction();
+
         if (oldCalib.getCTable()!=null) {
-            cTable = oldCalib.getCTable().clone();
+            cTable = oldCalib.getCTable();
         }
 
         invertedLut = false;
-        bitDepth = 8; //TODO update this somehow
+        bitDepth = 16; //TODO we should default to 16 bit
         zeroClip = oldCalib.zeroClip();
         invertY = false;
     }
-
-    /** Constructs a new Calibration object using the default values.
-     For density calibration, the image is assumed to be 8-bits. */
-    public IJCalibration() {
-    }
-
-
 
     /** Returns true if this image is spatially calibrated. */
     public boolean scaled() {
@@ -149,6 +167,7 @@ public class IJCalibration extends Calibration implements Cloneable, Serializabl
         }
         units = null;
     }
+
 
     /** Sets the X length unit. */
     public void setXUnit(String unit) {
@@ -226,7 +245,7 @@ public class IJCalibration extends Calibration implements Cloneable, Serializabl
     /** Converts a y-coordinate in pixels to physical units (e.g. mm),
      taking into account the invertY and global "Invert Y Coordinates" flags. */
     public double getY(double y, int imageHeight) {
-        if (invertY || (Analyzer.getMeasurements()& Measurements.INVERT_Y)!=0) {
+        if (invertY || (Analyzer.getMeasurements()&Measurements.INVERT_Y)!=0) {
             if (yOrigin!=0.0)
                 return (yOrigin-y)*pixelHeight;
             else
@@ -457,29 +476,6 @@ public class IJCalibration extends Calibration implements Cloneable, Serializabl
         return index;
     }
 
-    /** Returns a clone of this object. */
-    public Calibration copy() {
-        return (IJCalibration)clone();
-    }
-
-    public synchronized Object clone() {
-        return super.clone();
-    }
-
-    /** Compares two Calibration objects for equality. */
-    public boolean equals(Calibration cal) {
-        if (cal==null)
-            return false;
-        boolean equal = true;
-        if (cal.pixelWidth!=pixelWidth || cal.pixelHeight!=pixelHeight || cal.pixelDepth!=pixelDepth)
-            equal = false;
-        if (!cal.getUnit().equals(unit))
-            equal = false;
-        if (!cal.getValueUnit().equals(valueUnit) || cal.getFunction()!=function)
-            equal = false;
-        return equal;
-    }
-
     /** Returns true if this is a signed 16-bit image. */
     public boolean isSigned16Bit() {
         return (bitDepth==16 && function>=STRAIGHT_LINE && function<=EXP_RECOVERY && coefficients!=null
@@ -499,10 +495,6 @@ public class IJCalibration extends Calibration implements Cloneable, Serializabl
         return zeroClip;
     }
 
-    /** Sets the 'invertY' flag. */
-    public void setInvertY(boolean invertYCoordinates) {
-        invertY = invertYCoordinates;
-    }
 
     /** Set the default state of the animation "Loop back and forth" flag */
     public static void setLoopBackAndForth(boolean loop) {
@@ -520,6 +512,8 @@ public class IJCalibration extends Calibration implements Cloneable, Serializabl
                         + ", table=" + (cTable!=null?""+cTable.length:"null")
                         + ", vunit=" + valueUnit;
     }
+
+
 }
 
 

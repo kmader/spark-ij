@@ -34,5 +34,14 @@ object SerDeserHelper extends Serializable {
     }
   }
 
+  def typedDebytify[T](bArr: Array[Byte]) =
+    Try {
+      debytify(bArr).get.asInstanceOf[T]
+    }
+
+  def typedSerialize[T](inObj: T) = Try {
+    typedDebytify[T](bytify(inObj).get).get
+  }
+
 
 }

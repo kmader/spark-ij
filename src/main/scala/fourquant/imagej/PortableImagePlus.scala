@@ -43,13 +43,24 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
     this(inImage,new ImageLog(LogEntry.create(inImage)))
 
 
-  @deprecated("should not be used, since images should always have a log and calibration","1.0")
-  def this(inArray: AnyRef) =
-    this(Right((new IJCalibration(),inArray)), LogEntry.createFromArray("SpijiArray",inArray))
+
+
+  @deprecated("should not be used, since images should always have a log","1.0")
+  def this(inArray: AnyRef, cal: IJCalibration) =
+    this(Right((cal,
+      inArray)),
+      LogEntry.createFromArray("SpijiArray",inArray))
 
   @deprecated("should not be used, since images should always have a log","1.0")
   def this(inArray: AnyRef, cal: Calibration) =
-    this(Right((new IJCalibration(cal),inArray)), LogEntry.createFromArray("SpijiArray",inArray))
+      this(Right((new IJCalibration(cal),
+        inArray)),
+        LogEntry.createFromArray("SpijiArray",inArray))
+
+
+  @deprecated("should not be used, since images should always have a log and calibration","1.0")
+  def this(inArray: AnyRef) =
+    this(inArray,new Calibration())
 
   @deprecated("should only be used when a source is not known","1.0")
   def this(inProc: ImageProcessor) =
@@ -65,7 +76,8 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
       case Left(tImg) => tImg
       case Right((calib,tArr)) => {
         val oImage = Spiji.createImage(File.createTempFile("img","").getName,tArr,false)
-        oImage.setCalibration(calib)
+        oImage.setCalibration(calib.asCalibration(oImage))
+        //calib.setImage(oImage)
         oImage
       }
     }
@@ -295,7 +307,15 @@ object PortableImagePlus extends Serializable {
     implicit class cleverImagePlus(curImg: ImagePlus) {
       def run(cmd: String, args: String = ""): ImagePlus = {
         lazy val pargs = ImageJSweep.parseArgsWithDelim(args," ")
+
+        val oldCal = new IJCalibration(curImg.getCalibration)
+        //NOTE the duplicate command does not copy the calibration
         val localImgCopy = if(ensureImmutability) curImg.duplicate() else curImg
+        //NOTE the calibration is copied more reliably through copyAttributes than setCalibration (no idea why)
+        //localImgCopy.copyAttributes(curImg)
+        localImgCopy.setCalibration(oldCal.asCalibration(curImg))
+
+        println("ORIG:\t"+curImg.getCalibration()+"\nCOPY:\t"+localImgCopy.getCalibration())
 
         Spiji.setTempCurrentImage(localImgCopy)
         cmd match {
@@ -314,7 +334,13 @@ object PortableImagePlus extends Serializable {
           case _ =>
             Spiji.run(cmd,args)
         }
-        Spiji.getCurImage()
+
+        val outImage = Spiji.getCurImage()
+        //outImage.copyAttributes(curImg)
+        outImage.setCalibration(oldCal.asCalibration(outImage))
+
+        println("ORIG:\t"+curImg.getCalibration()+"\nIOUT:\t"+outImage.getCalibration())
+        outImage
       }
 
       /**

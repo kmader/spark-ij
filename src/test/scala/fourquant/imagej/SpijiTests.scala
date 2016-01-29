@@ -1,5 +1,6 @@
 package fourquant.imagej
 
+import ch.fourquant.images.types.SerDeserHelper
 import fourquant.imagej.scOps._
 import org.apache.spark.{LocalSparkContext, SparkContext}
 import org.scalatest.{FunSuite, Matchers}
@@ -73,6 +74,7 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
   ) {
     test(s"Simple Noise: $thrshCmd") {
       getIJS.setupFiji()
+
       val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(0))
 
       val rt = tImg.run("Add Noise").
@@ -90,7 +92,34 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
       assert(rt.min("Area").get < rt.max("Area").get, "Minimum area should be less than maximum")
       assert(rt.min("Area").get > 0, "Minumum should be greater than 0")
     }
+    test(s"Preserving Calibration Information: $thrshCmd") {
+      val tCalib = new IJCalibration()
+      tCalib.pixelWidth =   .99
+      tCalib.pixelHeight = 0.98
+      tCalib.pixelDepth = 0.97
+      tCalib.xOrigin =   .7
 
+      tCalib.setCTable(new Array[Float](65536),"Golds")
+
+      tCalib.setUnit("mm")
+      //tCalib.setValueUnit("Golds")
+
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),tCalib)
+
+      val ntImg = SerDeserHelper.typedSerialize(tImg).get
+
+      val cTable = tImg.
+        run(thrshCmd._1,thrshCmd._2)
+
+      println("Original, Serialized, Tabular, Processed")
+      println(s"$tCalib =? \n${ntImg.getCalibration} =? \n${tImg.getImg.getCalibration} =? \n${cTable
+        .getCalibration}")
+
+      tImg.getImg.getCalibration.toString shouldBe tCalib.toString
+      ntImg.getImg.getCalibration.toString shouldBe tCalib.toString
+      cTable.getCalibration.toString shouldBe tCalib.toString
+
+    }
     test(s"Reusing Images: $thrshCmd") {
       val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
 
