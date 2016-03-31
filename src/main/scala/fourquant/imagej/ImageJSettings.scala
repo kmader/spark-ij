@@ -2,6 +2,7 @@ package fourquant.imagej
 
 import ij.IJ
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.SQLContext
 
 /**
   * A class which hangs around and keeps all of the imagej settings (so they can be sent to
@@ -33,6 +34,17 @@ case class ImageJSettings(ijPath: String,
     * @return per default 100 but can be lower for many cases
     */
   def initElementCount() = 100
+
+  /**
+    * If there are any special or additional functions to be registered by the current IJ settings
+    * @param sq the context to register the functions to
+    */
+  def registerSQLFunctions(sq: SQLContext): Unit = {}
+  /**
+    * If there are any special or additional functions to be registered by the current IJ settings
+    * @param sq the context to register the functions to
+    */
+  def registerSQLDebugFunctions(sq: SQLContext): Unit = {}
 
   def setupSpark(sc: SparkContext, partRun: Boolean = false) = {
     if(!showGui) {

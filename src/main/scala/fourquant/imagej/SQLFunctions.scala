@@ -188,6 +188,7 @@ object SQLFunctions extends Serializable {
 
     sq.udf.register("hist_compare",(a: PortableImagePlus, b: PortableImagePlus) => udfs.hist_compare(a,b))
 
+    fs.registerSQLFunctions(sq)
   }
 
 
@@ -240,6 +241,7 @@ object SQLFunctions extends Serializable {
     sq.udf.register("listplugins", () => debugUdfs.listplugins() )
     sq.udf.register("listcommands", () => debugUdfs.listcommands() )
     sq.udf.register("showcalibration", (s: PortableImagePlus) => debugUdfs.showcalibration(s))
+    fs.registerSQLDebugFunctions(sq)
   }
 
 }
