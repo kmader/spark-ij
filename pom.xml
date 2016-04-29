@@ -5,9 +5,10 @@
     <parent>
         <groupId>net.imagej</groupId>
         <artifactId>pom-imagej</artifactId>
-        <version>5.0</version>
+        <version>14.8.0</version>
         <relativePath />
     </parent>
+
     <groupId>fourquant</groupId>
     <artifactId>spark-ij</artifactId>
     <version>1.0-SNAPSHOT</version>
@@ -16,7 +17,9 @@
     <description>Integrating ImageJ and particularly macro and plugin functionality on distributed image datasets</description>
 
     <properties>
+        <spio.version>1.0-SNAPSHOT</spio.version>
         <scala.major>2.10</scala.major>
+
         <scala.compile.version>2.10.5</scala.compile.version>
         <scala.version>2.10.5</scala.version>
         <java.version>1.7</java.version>
@@ -40,15 +43,24 @@
 
 
     <dependencies>
+
         <dependency>
             <groupId>net.imagej</groupId>
             <artifactId>imagej</artifactId>
+            <!-- at least <version>2.0.0-rc-45</version> -->
         </dependency>
 
         <!-- ImageJ 1 dependencies -->
         <dependency>
             <groupId>net.imagej</groupId>
             <artifactId>ij</artifactId>
+        </dependency>
+
+        <!-- for scifio support -->
+        <dependency>
+            <groupId>fourquant</groupId>
+            <artifactId>spark-scifio</artifactId>
+            <version>${spio.version}</version>
         </dependency>
 
 

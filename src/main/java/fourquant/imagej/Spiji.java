@@ -78,8 +78,8 @@ import ij.measure.ResultsTable;
 import ij.plugin.filter.Analyzer;
 import ij.plugin.frame.Recorder;
 import ij.process.*;
-import net.imagej.patcher.LegacyEnvironment;
-import net.imagej.patcher.LegacyInjector;
+//import net.imagej.patcher.LegacyEnvironment;
+//import net.imagej.patcher.LegacyInjector;
 
 import java.awt.Polygon;
 import java.awt.Rectangle;
@@ -136,7 +136,6 @@ import static fourquant.imagej.TImgTools.*;
 public class Spiji {
 
     public static interface SpijiImageJContext {
-        public LegacyEnvironment getLE();
         public void setTempCurrentImage(ImagePlus ip);
         public ImagePlus getCurImage();
 
@@ -155,7 +154,7 @@ public class Spiji {
     /**
      *         if(ij1==null)  IJ.runMacro(macroData,args);
      else ij1.runMacro(macroData,args);
-     */
+
     public static class LegacyEnvironmentContext extends LegacyEnvironment
             implements SpijiImageJContext {
 
@@ -186,15 +185,12 @@ public class Spiji {
             return true;
         }
     }
+        */
     public static class SPImageJContext implements SpijiImageJContext {
         protected ImageJ imagej;
 
         public SPImageJContext(ImageJ curImageJ) {
             imagej=curImageJ;
-        }
-        @Override
-        public LegacyEnvironment getLE() {
-            return null;
         }
 
         @Override
@@ -392,15 +388,8 @@ public class Spiji {
 
     static {
         final boolean useLegacy = false;
-        if(useLegacy) {
-            try {
-                ij1 = new LegacyEnvironmentContext(null, true);
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        } else {
+
             ij1 = new SPImageJContext(null);
-        }
     }
 
     ;
@@ -419,14 +408,6 @@ public class Spiji {
             System.out.println("JVM> Version: " + System.getProperty("java.version"));
             System.out.println("JVM> Total amount of memory: " + Math.round(runtime.totalMemory() / 1024) + " Kb");
             System.out.println("JVM> Amount of free memory: " + Math.round(runtime.freeMemory() / 1024) + " Kb");
-        }
-        if((!visible) && (ij1==null)) {
-            try {
-                ij1 = new LegacyEnvironmentContext( Thread.currentThread().getContextClassLoader(), true);
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-                System.err.println("Classes could not be patched!");
-            }
         }
 
         if (ij1 instanceof ImageJ) {
@@ -778,6 +759,20 @@ public class Spiji {
         double[][] output = new double[1][sliceData.length];
         output[0]=sliceData;
         return output;
+    }
+
+    /**
+     * Create a stack from an array of imageplus
+     * @param imArr the (sorted) array of imageplus
+     * @return a new image
+     */
+    public static ImagePlus createStackFromImagePlus(ImagePlus[] imArr) throws IOException {
+        final ImageStack outStack = imArr[0].createEmptyStack();
+        for (ImagePlus cur_image : imArr) {
+            outStack.addSlice(cur_image.getProcessor());
+        }
+
+        return new ImagePlus(File.createTempFile("stack_name","log").getAbsolutePath(),outStack);
     }
 
     /**

@@ -7,6 +7,7 @@ import org.apache.spark.{LocalSparkContext, SparkContext}
 import org.scalatest.{FunSuite, Matchers}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.ClassTag
 
 object SpijiTests extends Serializable {
   val width = 100
@@ -15,6 +16,14 @@ object SpijiTests extends Serializable {
   val localMasterWorkers = false
   val runLocal = true
   val runLocalCluster = false
+
+  val local_io_tests = true
+  // getClass().getResource("images/dicom/test_dir/000000.dcm").getFile()
+  val local_io_path = "images/dicom/test_dir/"
+
+  val first_local_img = s"${local_io_path}/000000.dcm"
+
+
   val ijs = ImageJSettings("/Applications/Fiji.app/", showGui = false, runLaunch = false,
     record = false)
 
@@ -67,6 +76,8 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
       Spiji.getCommandList.contains("Auto Threshold"),
       "Auto Threshold is part of FIJI")
   }
+
+
   for (thrshCmd <-
        Array(
          ("applyThreshold", "lower=0 upper=20"),
@@ -210,6 +221,37 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
     noHist-nfHist should be > 0.0
     noHist-nfHist should be < 1.0
     nfsHist-nfHist shouldBe 1.0+-0.01
+  }
+  def testStack[T](ivals: Array[T])(implicit ct: ClassTag[T]) = {
+    val imageArray = ivals.map(i =>
+      new PortableImagePlus(Array.fill[T](SpijiTests.width, SpijiTests.height)(i)).getImg())
+
+    val imStack = Spiji.createStackFromImagePlus(imageArray.toArray)
+    println(s"${imStack.getStackSize} stack size, ${imStack.getNSlices} nslices, ${imStack.getSlice}")
+    imStack.getStackSize shouldBe 11
+    for(i <- 1 to 11) {
+      val cProc = imStack.getStack().getProcessor(i).convertToShortProcessor(false)
+      println(s"$i -> $cProc, val:${cProc.get(0,0)}")
+      cProc.get(0,0) shouldBe (i-1)
+    }
+
+    val pipStack = new PortableImagePlus(imStack)
+    val fullArray = pipStack.getArray()
+    println(s"Reading out full array: $fullArray")
+    val tArr = fullArray.asInstanceOf[Array[Array[Array[Int]]]]
+
+    tArr(0)(0)(0) shouldBe 0
+    tArr.length shouldBe imStack.getHeight
+    tArr(0).length shouldBe imStack.getWidth
+    tArr(0)(0).length shouldBe imStack.getStackSize
+  }
+
+  test("Building Stacks Integer") {
+    testStack[Int]((0 to 10).toArray)
+  }
+
+  test("Building Stacks Short") {
+    testStack[Short]((0 to 10).toArray.map(_.toShort))
   }
 
 }

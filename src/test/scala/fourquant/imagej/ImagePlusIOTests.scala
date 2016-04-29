@@ -75,8 +75,3 @@ class ImageLogTests extends FunSuite with Matchers {
   }
 
 }
-
-
-class ImagePlusIOTests extends FunSuite {
-
-}
