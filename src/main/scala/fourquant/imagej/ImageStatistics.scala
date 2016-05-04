@@ -20,6 +20,12 @@ case class ImageStatistics(min: Double,mean: Double, stdDev: Double,
       )
   }
 
+  /**
+    * Create a map representation which is more easily usuable in SQL
+    * @return a map with the field names and values from ImageStatistics
+    */
+  def toMap(): Map[String, Double] = Map("min" -> min,"max"->max, "mean"->mean, "stdDev"->stdDev, "pts"->pts.toDouble)
+
 }
 
 

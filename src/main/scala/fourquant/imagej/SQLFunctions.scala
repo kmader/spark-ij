@@ -82,10 +82,10 @@ object SQLFunctions extends Serializable {
       * Get the statistics of the current image
  *
       * @param s the image
-      * @return an [[ImageStatistics]] with the information.
+      * @return an [[Map]] with the information.
       */
     def stats(s: PortableImagePlus) =
-      s.getImageStatistics()
+      s.getImageStatistics().toMap()
 
     /**
       * Calculate the mean of an image
@@ -133,6 +133,13 @@ object SQLFunctions extends Serializable {
     def hist(s: PortableImagePlus) = new HistogramCC(s.getHistogram())
 
     /**
+      * Get the number of slices in the image
+      * @param s the input image as portable image plus
+      * @return the number of slices
+      */
+    def nslices(s: PortableImagePlus) = s.getImg().getNSlices
+
+    /**
       * Calculate a histgram with a fixed bin set on the current image
  *
       * @param s the image to calculate the histogram on
@@ -158,6 +165,23 @@ object SQLFunctions extends Serializable {
     def hist_compare(s1: PortableImagePlus, s2: PortableImagePlus) =
     (s1.getHistogram()-s2.getHistogram())
 
+    /**
+      * Really inefficient function to convert a PIP into an array for json storage
+      * @param s the image
+      *          @note just takes the first element of 3d color stacks
+      * @return a 3D double array
+      */
+    def toarray(s: PortableImagePlus) = s.getArray() match {
+        case sarr: Array[Array[Array[Short]]] => Some(sarr.map(_.map(_.map(_.toDouble))))
+        case sarr: Array[Array[Array[Array[Short]]]] =>
+          //TODO this needs a nice implementation
+          Some(sarr.map(_.map(_.map(_(0).toDouble))))
+        case iarr: Array[Array[Array[Int]]] => Some(iarr.map(_.map(_.map(_.toDouble))))
+        case darr: Array[Array[Array[Double]]] => Some(darr)
+        case _ => None
+      }
+
+
   }
 
 
@@ -175,10 +199,15 @@ object SQLFunctions extends Serializable {
     sq.udf.register("runmap", (a: PortableImagePlus, cmd: String, args: String) => udfs.runmap(a,cmd,args))
     sq.udf.register("runrow", (a: PortableImagePlus, cmd: String, args: String) => udfs.runrow(a,cmd,args))
     sq.udf.register("stats",(a: PortableImagePlus) => udfs.stats(a))
+    sq.udf.register("strstats",(a: PortableImagePlus) => udfs.stats(a).toString())
     sq.udf.register("mean",(a: PortableImagePlus) => udfs.mean(a))
     sq.udf.register("shape",(a: PortableImagePlus) => udfs.shape(a))
 
+    sq.udf.register("nslices",(a: PortableImagePlus) => udfs.nslices(a))
+
     sq.udf.register("subtract",(a: PortableImagePlus, b: PortableImagePlus) => udfs.subtract(a,b))
+
+    sq.udf.register("toarray",(s: PortableImagePlus) => udfs.toarray(s))
 
     sq.udf.register("scale",(a: PortableImagePlus, scf: Double) => udfs.scale(a,scf))
 

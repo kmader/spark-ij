@@ -110,7 +110,7 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
     val nameFcn = (inCls: String) => this.getClass().getSimpleName()+"["+inCls+"]"
     baseData.fold(
       img => nameFcn(img.toString),
-      arr => nameFcn(scala.runtime.ScalaRunTime.stringOf(arr))
+      carr  => nameFcn(carr._1+s"{${carr._2}}")
     )
   }
 
