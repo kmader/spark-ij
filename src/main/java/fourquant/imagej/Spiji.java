@@ -766,7 +766,23 @@ public class Spiji {
      * @param imArr the (sorted) array of imageplus
      * @return a new image
      */
-    public static ImagePlus createStackFromImagePlus(ImagePlus[] imArr) throws IOException {
+    public static ImagePlus createStackFromImagePlusArr(ImagePlus[] imArr) {
+        final ImageStack outStack = imArr[0].getStack();
+
+        for (int i = 1; i<imArr.length;i++) {
+            outStack.addSlice(imArr[i].getProcessor());
+        }
+
+        imArr[0].setStack(outStack);
+        return imArr[0];
+    }
+
+    /**
+     * Create a stack from an array of imageplus
+     * @param imArr the (sorted) array of imageplus
+     * @return a new image
+     */
+    public static ImagePlus createNewStackFromImagePlusArr(ImagePlus[] imArr) throws IOException {
         final ImageStack outStack = imArr[0].createEmptyStack();
         for (ImagePlus cur_image : imArr) {
             outStack.addSlice(cur_image.getProcessor());
