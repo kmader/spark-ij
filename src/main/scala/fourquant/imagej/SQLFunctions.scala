@@ -167,11 +167,12 @@ object SQLFunctions extends Serializable {
 
     /**
       * Really inefficient function to convert a PIP into an array for json storage
+ *
       * @param s the image
       *          @note just takes the first element of 3d color stacks
       * @return a 3D double array
       */
-    def toarray(s: PortableImagePlus) = s.getArray() match {
+    def toarray(s: PortableImagePlus): Option[Array[Array[Array[Double]]]] = s.getArray() match {
         case sarr: Array[Array[Array[Short]]] => Some(sarr.map(_.map(_.map(_.toDouble))))
         case sarr: Array[Array[Array[Array[Short]]]] =>
           //TODO this needs a nice implementation
@@ -231,11 +232,18 @@ object SQLFunctions extends Serializable {
     def tostring(s: AnyRef) = s.toString
 
     /**
+      * Show the metadata as a string for the current image
+      * @param s the image
+      * @return its calibration as a string
+      */
+    def showmetadata(s: PortableImagePlus) = s"(${s.getMetaData.toString})"
+
+    /**
       * Show the calibration as a string for the current image
       * @param s the image
       * @return its calibration as a string
       */
-    def showcalibration(s: PortableImagePlus) = s"(${s.getCalibration.toString})"
+    def showcalibration(s: PortableImagePlus) = s"(${s.getMetaData.ijc.toString})"
 
 
     /**

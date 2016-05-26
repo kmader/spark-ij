@@ -2,6 +2,7 @@ package fourquant.imagej
 
 import ch.fourquant.images.types.HistogramCC
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
+import fourquant.imagej.PortableImagePlus.IJMetaData
 import fourquant.io.hadoop.ByteOutputFormat
 import ij.{IJ, ImagePlus, ImageStack}
 import org.apache.hadoop.fs.Path
@@ -70,7 +71,7 @@ def SetupImageJInPartition(ijs: ImageJSettings): Unit = ijs.setupFiji
         parallelize(0 until imgs).
         map(
           i => (prefix+i.toString,
-          new PortableImagePlus(Array.fill[A](width, height)(indFun(i)),new IJCalibration()))
+          new PortableImagePlus(Array.fill[A](width, height)(indFun(i)),IJMetaData.emptyMetaData))
       )
     }
 

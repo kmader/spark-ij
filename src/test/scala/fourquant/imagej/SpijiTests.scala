@@ -1,6 +1,7 @@
 package fourquant.imagej
 
 import ch.fourquant.images.types.SerDeserHelper
+import fourquant.imagej.PortableImagePlus.IJMetaData
 import fourquant.imagej.scOps._
 import ij.measure.Calibration
 import org.apache.spark.{LocalSparkContext, SparkContext}
@@ -87,7 +88,8 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
     test(s"Simple Noise: $thrshCmd") {
       getIJS.setupFiji()
 
-      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(0))
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(0),PortableImagePlus
+        .IJMetaData.emptyMetaData())
 
       val rt = tImg.run("Add Noise").
         run(thrshCmd._1,thrshCmd._2).
@@ -120,7 +122,7 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
       println(s"Before\t$tCalib")
       //tCalib.setValueUnit("Golds")
 
-      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),tCalib)
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),IJMetaData(tCalib,""))
 
       val ntImg = SerDeserHelper.typedSerialize(tImg).get
 
@@ -128,16 +130,17 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
         run(thrshCmd._1,thrshCmd._2)
 
       println("Original, Serialized, Tabular, Processed")
-      println(s"$tCalib =? \n${ntImg.getCalibration} =? \n${tImg.getImg.getCalibration} =? \n${cTable
-        .getCalibration}")
+      println(s"$tCalib =? \n${ntImg.getMetaData.ijc} =? \n${tImg.getImg.getCalibration} =? \n${cTable
+          .getMetaData.ijc}")
 
       tImg.getImg.getCalibration.toString shouldBe tCalib.toString
       ntImg.getImg.getCalibration.toString shouldBe tCalib.toString
-      cTable.getCalibration.toString shouldBe tCalib.toString
+      cTable.getMetaData.ijc.toString shouldBe tCalib.toString
 
     }
     test(s"Reusing Images: $thrshCmd") {
-      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),
+        PortableImagePlus.IJMetaData.emptyMetaData())
 
       val cTable = tImg.
         run(thrshCmd._1,thrshCmd._2).
@@ -158,7 +161,8 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
   }
 
   test("Test Results Table with Hist Command") {
-    val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+    val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),
+      PortableImagePlus.IJMetaData.emptyMetaData())
     val (outImg,outTable) = tImg
       .runWithTable("Histogram")
 
@@ -170,7 +174,8 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
 
 
   test("Histogram Analysis") {
-    val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+    val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),
+      PortableImagePlus.IJMetaData.emptyMetaData())
     val simpHist = tImg.getHistogram(Some((0.0,10.0)),bins=3)
     println(simpHist)
     simpHist.bin_centers(0) shouldBe 0.0+-0.1
@@ -182,7 +187,8 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
 
   for(imgType <- Array("8-bit","16-bit","32-bit","RGB Color")) {
     test(s"Histogram Analysis $imgType") {
-      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+      val tImg = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),
+        PortableImagePlus.IJMetaData.emptyMetaData())
       val simpHist = tImg.
         run(imgType).
         getHistogram(Some((0.0,10.0)),bins=3)
@@ -201,9 +207,10 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
   }
 
   test("Histogram Distance") {
-    val noiseFree = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5))
+    val noiseFree = new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(5),
+      PortableImagePlus.IJMetaData.emptyMetaData())
     val noiseFreeShift =
-      new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(50),new IJCalibration())
+      new PortableImagePlus(Array.fill[Int](SpijiTests.width, SpijiTests.height)(50),IJMetaData.emptyMetaData())
     val noisyImage = noiseFree.run("Add Noise")
 
     val nfHist = noiseFree.getHistogram()
@@ -224,9 +231,11 @@ abstract class AbsSpijiTests extends FunSuite with Matchers {
   }
   def testStack[T](ivals: Array[T])(implicit ct: ClassTag[T]) = {
     val imageArray = ivals.map(i =>
-      new PortableImagePlus(Array.fill[T](SpijiTests.width, SpijiTests.height)(i)).getImg())
+      new PortableImagePlus(Array.fill[T](SpijiTests.width, SpijiTests.height)(i),
+        PortableImagePlus.IJMetaData.emptyMetaData()).getImg()
+    )
 
-    val imStack = Spiji.createStackFromImagePlus(imageArray.toArray)
+    val imStack = Spiji.createStackFromImagePlusArr(imageArray.toArray)
     println(s"${imStack.getStackSize} stack size, ${imStack.getNSlices} nslices, ${imStack.getSlice}")
     imStack.getStackSize shouldBe 11
     for(i <- 1 to 11) {

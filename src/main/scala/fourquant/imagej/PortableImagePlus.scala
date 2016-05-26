@@ -5,6 +5,7 @@ import java.io._
 import ch.fourquant.images.types.PipUDT
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.imagej.ParameterSweep.ImageJSweep
+import fourquant.imagej.PortableImagePlus.IJMetaData
 import fourquant.imagej.Spiji.{PIPOps, PIPTools}
 import ij.ImagePlus
 import ij.measure.Calibration
@@ -22,7 +23,7 @@ import org.apache.spark.sql.types._
   * @param baseData either an array of the correct type or an imageplus object
  */
 @SQLUserDefinedType(udt = classOf[PipUDT])
-class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
+class PortableImagePlus(var baseData: Either[ImagePlus,(PortableImagePlus.IJMetaData,AnyRef)],
                         var imgLog: ImageLog) extends Serializable {
 
   val pipStoreSerialization = false
@@ -32,7 +33,7 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
     *
     * @param logEntry single entry (usually creation)
    */
-  def this(bd: Either[ImagePlus,(IJCalibration,AnyRef)], logEntry: LogEntry) =
+  def this(bd: Either[ImagePlus,(PortableImagePlus.IJMetaData,AnyRef)], logEntry: LogEntry) =
     this(bd,new ImageLog(logEntry))
 
   def this(inImage: ImagePlus, oldLog: ImageLog) =
@@ -46,21 +47,11 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
 
 
   @deprecated("should not be used, since images should always have a log","1.0")
-  def this(inArray: AnyRef, cal: IJCalibration) =
+  def this(inArray: AnyRef, cal: PortableImagePlus.IJMetaData) =
     this(Right((cal,
       inArray)),
       LogEntry.createFromArray("SpijiArray",inArray))
 
-  @deprecated("should not be used, since images should always have a log","1.0")
-  def this(inArray: AnyRef, cal: Calibration) =
-      this(Right((new IJCalibration(cal),
-        inArray)),
-        LogEntry.createFromArray("SpijiArray",inArray))
-
-
-  @deprecated("should not be used, since images should always have a log and calibration","1.0")
-  def this(inArray: AnyRef) =
-    this(inArray,new Calibration())
 
   @deprecated("should only be used when a source is not known","1.0")
   def this(inProc: ImageProcessor) =
@@ -74,11 +65,10 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
   private def calcImg: ImagePlus =
     baseData match {
       case Left(tImg) => tImg
-      case Right((calib,tArr)) => {
+      case Right((ijmd,tArr)) => {
         val oImage = Spiji.createImage(File.createTempFile("img","").getName,tArr,false)
-        oImage.setCalibration(calib.asCalibration(oImage))
-        //calib.setImage(oImage)
-        oImage
+        val nImage = ijmd.toImagePlus(oImage)
+        nImage
       }
     }
 
@@ -91,20 +81,19 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
         tArr._2
     }
 
-  private def calcCalibration: IJCalibration =
+  private def calcMetaData: IJMetaData =
     baseData match {
-      case Left(tImg) =>
-        new IJCalibration(tImg.getCalibration())
+      case Left(tImg) => IJMetaData.fromImagePlus(tImg)
       case Right(tArr) =>
         tArr._1
     }
   lazy val curImg = calcImg
   lazy val curArr = calcArray
-  lazy val curCalibration = calcCalibration
+  lazy val curMetaData = calcMetaData
 
   def getImg() = curImg
   def getArray() = curArr
-  def getCalibration = curCalibration
+  def getMetaData = curMetaData
 
   override def toString(): String = {
     val nameFcn = (inCls: String) => this.getClass().getSimpleName()+"["+inCls+"]"
@@ -280,14 +269,14 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(IJCalibration,AnyRef)],
   @throws[IOException]("if the file doesn't exist")
   private def writeObject(oos: ObjectOutputStream): Unit = {
     oos.writeObject(imgLog)
-    oos.writeObject(curCalibration)
+    oos.writeObject(curMetaData)
     oos.writeObject(curArr)
   }
   @throws[IOException]("if the file doesn't exist")
   @throws[ClassNotFoundException]("if the class cannot be found")
   private def readObject(in: ObjectInputStream): Unit =  {
     imgLog = in.readObject.asInstanceOf[ImageLog]
-    val calibration = in.readObject().asInstanceOf[IJCalibration]
+    val calibration = in.readObject().asInstanceOf[IJMetaData]
     val data = in.readObject()
     baseData = Right((calibration,data))
   }
@@ -302,6 +291,51 @@ object PortableImagePlus extends Serializable {
    * Should immutablity of imageplus be ensured at the cost of performance and memory
    */
   val ensureImmutability: Boolean = true
+
+  /**
+    * All of the relevant associated metadata for an imageplus object so it can be serialized and tossed around
+    *
+    * @param ijc
+    */
+  case class IJMetaData(ijc: IJCalibration, info_str: String) {
+    /**
+      * apply the metadata to an imageplus object
+      * @param imp
+      * @return imageplus object with metadata applied
+      */
+    def toImagePlus(imp: ImagePlus): ImagePlus = {
+      imp.setCalibration(ijc.asCalibration(imp))
+      //calib.setImage(oImage)
+      imp.setProperty("Info",info_str)
+      imp
+    }
+
+  }
+
+  object IJMetaData extends Serializable {
+    /**
+      * encapsulate all the metadata from a imageplus object
+      * @param imp
+      * @return
+      */
+    def fromImagePlus(imp: ImagePlus) = {
+      val ijc = new IJCalibration(imp.getCalibration())
+      val info = imp.getInfoProperty match {
+        case null => ""
+        case a: String => a
+      }
+      IJMetaData(ijc,info)
+    }
+
+    /**
+      * create a new empty metadata field (should not normally be used
+      * @return
+      */
+    @deprecated("Should only be used for synthetic or otherwise artificially generated images","1.0")
+    def emptyMetaData() = {
+      new IJMetaData(new IJCalibration(),"")
+    }
+  }
 
   object implicits extends Serializable {
     implicit class cleverImagePlus(curImg: ImagePlus) {

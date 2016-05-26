@@ -1,6 +1,7 @@
 package tipl.ij.scripting
 
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
+import fourquant.imagej.PortableImagePlus.IJMetaData
 import fourquant.imagej.{IJCalibration, PortableImagePlus}
 import fourquant.imagej.Spiji.PIPOps
 import org.json4s._
@@ -24,7 +25,7 @@ class ImageLogTests extends FunSuite with Matchers {
   val height = 10
 
   lazy val createImage = new PortableImagePlus(
-    Array.fill[Int](width, height)(1000),new IJCalibration())
+    Array.fill[Int](width, height)(1000),IJMetaData.emptyMetaData)
 
   test("LogEntry to JSON") {
     val le = LogEntry.create("TestSource", "TestInfo")
