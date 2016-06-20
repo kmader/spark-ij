@@ -20,13 +20,13 @@
         <spio.version>1.0-SNAPSHOT</spio.version>
         <scala.major>2.10</scala.major>
 
-        <scala.compile.version>2.10.5</scala.compile.version>
-        <scala.version>2.10.5</scala.version>
+        <scala.compile.version>2.11.8</scala.compile.version>
+        <scala.version>2.11.8</scala.version>
         <java.version>1.7</java.version>
 
-        <scala.binary.version>2.10</scala.binary.version>
+        <scala.binary.version>2.11</scala.binary.version>
         <scala.macros.version>2.0.1</scala.macros.version>
-        <spark.version>1.6.0</spark.version>
+        <spark.version>2.0.0-SNAPSHOT</spark.version>
         <javadoc.skip>false</javadoc.skip>
         <java.memory.min>-Xms1G</java.memory.min>
         <java.memory.max>-Xmx2G</java.memory.max>
@@ -128,6 +128,14 @@
             </releases>
             <snapshots>
                 <enabled>false</enabled>
+            </snapshots>
+        </repository>
+
+        <repository>
+            <id>asf-snapshot</id>
+            <url>http://repository.apache.org/snapshots</url>
+            <snapshots>
+                <enabled>true</enabled>
             </snapshots>
         </repository>
     </repositories>

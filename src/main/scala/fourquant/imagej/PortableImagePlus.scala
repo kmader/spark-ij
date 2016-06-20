@@ -1,8 +1,6 @@
 package fourquant.imagej
 
 import java.io._
-
-import ch.fourquant.images.types.PipUDT
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.imagej.ParameterSweep.ImageJSweep
 import fourquant.imagej.PortableImagePlus.IJMetaData
@@ -13,6 +11,7 @@ import ij.plugin.PlugIn
 import ij.plugin.filter.PlugInFilter
 import ij.process.ImageProcessor
 import org.apache.spark.annotation.Experimental
+import org.apache.spark.fourquant.PipUDT
 import org.apache.spark.sql.types._
 
 
@@ -300,6 +299,7 @@ object PortableImagePlus extends Serializable {
   case class IJMetaData(ijc: IJCalibration, info_str: String) {
     /**
       * apply the metadata to an imageplus object
+ *
       * @param imp
       * @return imageplus object with metadata applied
       */
@@ -315,6 +315,7 @@ object PortableImagePlus extends Serializable {
   object IJMetaData extends Serializable {
     /**
       * encapsulate all the metadata from a imageplus object
+ *
       * @param imp
       * @return
       */
@@ -329,6 +330,7 @@ object PortableImagePlus extends Serializable {
 
     /**
       * create a new empty metadata field (should not normally be used
+ *
       * @return
       */
     @deprecated("Should only be used for synthetic or otherwise artificially generated images","1.0")

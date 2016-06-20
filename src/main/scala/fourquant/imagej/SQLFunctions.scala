@@ -2,7 +2,7 @@ package fourquant.imagej
 
 import java.io.Serializable
 
-import ch.fourquant.images.types.{IJResultsTableUDT, HistogramCC}
+import ch.fourquant.images.types.HistogramCC
 import fourquant.imagej.ImageJSettings
 import org.apache.spark.sql.SQLContext
 

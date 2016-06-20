@@ -1,9 +1,9 @@
 package fourquant.imagej
 
 
-import ch.fourquant.images.types.{IJResultsTableUDT, ImageStatisticsUDT}
 import ij.plugin.filter.Analyzer
 import ij.{ImagePlus, WindowManager}
+import org.apache.spark.fourquant.IJResultsTableUDT
 import org.apache.spark.sql.types
 
 import scala.collection.mutable
@@ -131,7 +131,7 @@ object IJResultsTable {
 
     IJResultsTable(colNames,rowValues) //TODO rewrite this to not need the silly row-based format
   }
-  @deprecated("should not be used since it's implementation is buggy")
+  @deprecated("should not be used since it's implementation is buggy","1.0")
   def fromSpiji() = {
     val header = Spiji.getListColumns()
 

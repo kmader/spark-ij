@@ -12,7 +12,7 @@ import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFor
 import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat, Job => NewHadoopJob}
 import org.apache.spark.SparkContext
 import org.apache.spark.input.ImagePlusFileInputFormat
-import org.apache.spark.rdd.{OldBinaryFileRDD, RDD}
+import org.apache.spark.rdd.{RDD}
 import org.apache.spark.sql.SQLContext
 
 import scala.reflect.ClassTag
@@ -308,20 +308,6 @@ def SetupImageJInPartition(ijs: ImageJSettings): Unit = ijs.setupFiji
    */
   implicit class ImageJFriendlySparkContext(sc: SparkContext) {
     val defMinPart = sc.defaultMinPartitions
-
-    def ijByteFile(path: String, minPartitions: Int = sc.defaultMinPartitions): RDD[(String,
-      PortableImagePlus)] = {
-      val job = new NewHadoopJob(sc.hadoopConfiguration)
-      NewFileInputFormat.addInputPath(job, new Path(path))
-      val updateConf = job.getConfiguration
-      new OldBinaryFileRDD(
-        sc,
-        classOf[ImagePlusFileInputFormat],
-        classOf[String],
-        classOf[PortableImagePlus],
-        updateConf,
-        minPartitions).setName(path)
-    }
 
     def ijFile(path: String, minPartitions: Int = sc.defaultMinPartitions): RDD[(String,
       PortableImagePlus)] = {
