@@ -18,15 +18,15 @@
 
     <properties>
         <spio.version>1.0-SNAPSHOT</spio.version>
-        <scala.major>2.10</scala.major>
 
         <scala.compile.version>2.11.8</scala.compile.version>
         <scala.version>2.11.8</scala.version>
         <java.version>1.7</java.version>
 
         <scala.binary.version>2.11</scala.binary.version>
-        <scala.macros.version>2.0.1</scala.macros.version>
+
         <spark.version>2.0.0-SNAPSHOT</spark.version>
+
         <javadoc.skip>false</javadoc.skip>
         <java.memory.min>-Xms1G</java.memory.min>
         <java.memory.max>-Xmx2G</java.memory.max>
@@ -63,19 +63,6 @@
             <version>${spio.version}</version>
         </dependency>
 
-
-        <dependency>
-            <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_${scala.binary.version}</artifactId>
-            <version>2.2.6</version>
-            <scope>test</scope>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
          <!-- spark connection dependencies -->
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -94,6 +81,13 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+            <version>2.2.6</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
