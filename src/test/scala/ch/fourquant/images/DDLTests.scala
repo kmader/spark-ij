@@ -1,9 +1,8 @@
 package ch.fourquant.images
 
-import fourquant.imagej.{scOps, TestSupportFcns}
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.{LocalSparkContext, SparkContext}
+import fourquant.imagej.{TestSupportFcns, scOps}
+import org.apache.spark.LocalSparkContext
+import org.apache.spark.sql.SparkSession
 import org.scalatest.{FunSuite, Matchers}
 
 /**
@@ -11,17 +10,19 @@ import org.scalatest.{FunSuite, Matchers}
  */
 class DDLTests extends FunSuite with Matchers with LocalSparkContext {
 
-  val sc = getNewSpark("local[4]", "DDLTests")
+  //val sc = getNewSpark("local[4]", "DDLTests")
   //implicit val ijs = TestSupportFcns.ijs
+  val ss = SparkSession.builder().appName(this.getClass().getName()).master("local[4]")
+
   val contextList = Array(
-    ("SparkSQL",(iv: SparkContext) => new SQLContext(iv), TestSupportFcns.ijs), // test standard sparksql
-    ("HiveQL",(iv: SparkContext) => new HiveContext(sc), TestSupportFcns.ijs) // text hiveql
+    ("SparkSQL",() => ss.getOrCreate(), TestSupportFcns.ijs), // test standard sparksql
+    ("HiveQL",() => ss.enableHiveSupport().getOrCreate(), TestSupportFcns.ijs) // text hiveql
   )
   for ((cmName,contextMapping, curIjs) <- contextList) {
-    val sq = contextMapping(sc)
+    val sq = contextMapping()
 
     test(s"$cmName : Listing all plugins") {
-      import scOps._
+      import scOps.implicits._
 
       sq.registerImageJ(curIjs)
 
@@ -42,16 +43,19 @@ class DDLTests extends FunSuite with Matchers with LocalSparkContext {
                         """.stripMargin.replaceAll("\n", " "))
 
       sq.sql("SHOW TABLES").collect().foreach(println(_))
-      sq.tableNames().length shouldBe 1
+      sq.catalog.listTables().foreach(println(_))
+      sq.catalog.listTables().count shouldBe 1
       val tfi = sq.table("DebugImages")
       tfi.printSchema()
 
-      tfi.schema(0).name shouldBe "sample"
+      tfi.schema(0).name shouldBe "path"
 
-      tfi.schema(1).name shouldBe "image"
-      tfi.schema(1).dataType.typeName shouldBe "PortableImagePlusSQL"
+      tfi.schema(1).name shouldBe "name"
 
-      val oTab = sq.sql("SELECT sample,image FROM DebugImages")
+      tfi.schema(7).name shouldBe "image"
+      tfi.schema(7).dataType.typeName shouldBe "PortableImagePlusSQL"
+
+      val oTab = sq.sql("SELECT path,image FROM DebugImages")
 
       oTab.foreach(println(_))
 
@@ -67,7 +71,7 @@ class DDLTests extends FunSuite with Matchers with LocalSparkContext {
                         """.stripMargin.replaceAll("\n", " "))
 
       sq.sql("SHOW TABLES").collect().foreach(println(_))
-      sq.tableNames().length shouldBe 1
+      sq.catalog.listTables().count shouldBe 1
       val tfi = sq.table("DebugImages")
       tfi.printSchema()
 

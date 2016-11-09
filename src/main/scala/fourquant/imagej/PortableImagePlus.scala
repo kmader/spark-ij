@@ -1,12 +1,12 @@
 package fourquant.imagej
 
 import java.io._
+
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.imagej.ParameterSweep.ImageJSweep
 import fourquant.imagej.PortableImagePlus.IJMetaData
 import fourquant.imagej.Spiji.{PIPOps, PIPTools}
 import ij.ImagePlus
-import ij.measure.Calibration
 import ij.plugin.PlugIn
 import ij.plugin.filter.PlugInFilter
 import ij.process.ImageProcessor
@@ -96,10 +96,13 @@ class PortableImagePlus(var baseData: Either[ImagePlus,(PortableImagePlus.IJMeta
 
   override def toString(): String = {
     val nameFcn = (inCls: String) => this.getClass().getSimpleName()+"["+inCls+"]"
-    baseData.fold(
-      img => nameFcn(img.toString),
-      carr  => nameFcn(s"${carr._1}, {${carr._2}}")
-    )
+
+    baseData match {
+      case Left(img) if img != null => nameFcn(img.toString)
+      case Right(carr)  => nameFcn(s"${carr._1}, {${carr._2}}")
+      case other_data => nameFcn("Null Image")
+    }
+
   }
 
   /**

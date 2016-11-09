@@ -3,8 +3,7 @@ package fourquant.imagej
 import java.io.Serializable
 
 import ch.fourquant.images.types.HistogramCC
-import fourquant.imagej.ImageJSettings
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.{UDFRegistration, SQLContext}
 
 /**
   * Created by mader on 1/25/16.
@@ -108,6 +107,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Calculates the absolute difference between two images
+      *
       * @param s the input image
       * @param t the image to subtract
       * @return a new image [[PortableImagePlus]] with the result
@@ -134,6 +134,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Get the number of slices in the image
+      *
       * @param s the input image as portable image plus
       * @return the number of slices
       */
@@ -189,36 +190,36 @@ object SQLFunctions extends Serializable {
   /**
     * add all the needed imagej related udfs to the sqlcontext
  *
-    * @param sq the sqlcontext to add the functions to
+    * @param sq_udf the sqlcontext to add the functions to
     * @param fs the base imagejsettings to ensure it has been properly initialized
     */
-  def registerImageJ(sq: SQLContext, fs: ImageJSettings): Unit = {
+  def registerImageJ(sq_udf: UDFRegistration, fs: ImageJSettings): Unit = {
 
-    sq.udf.register("run2", (a: PortableImagePlus, cmd: String,args: String) =>  udfs.run2(a,cmd,args))
-    sq.udf.register("run", (a: PortableImagePlus, cmd: String) => udfs.run(a,cmd))
-    sq.udf.register("runtable", (a: PortableImagePlus, cmd: String, args: String) => udfs.runtable(a,cmd,args))
-    sq.udf.register("runmap", (a: PortableImagePlus, cmd: String, args: String) => udfs.runmap(a,cmd,args))
-    sq.udf.register("runrow", (a: PortableImagePlus, cmd: String, args: String) => udfs.runrow(a,cmd,args))
-    sq.udf.register("stats",(a: PortableImagePlus) => udfs.stats(a))
-    sq.udf.register("strstats",(a: PortableImagePlus) => udfs.stats(a).toString())
-    sq.udf.register("mean",(a: PortableImagePlus) => udfs.mean(a))
-    sq.udf.register("shape",(a: PortableImagePlus) => udfs.shape(a))
+    sq_udf.register("run2", (a: PortableImagePlus, cmd: String,args: String) =>  udfs.run2(a,cmd,args))
+    sq_udf.register("run", (a: PortableImagePlus, cmd: String) => udfs.run(a,cmd))
+    sq_udf.register("runtable", (a: PortableImagePlus, cmd: String, args: String) => udfs.runtable(a,cmd,args))
+    sq_udf.register("runmap", (a: PortableImagePlus, cmd: String, args: String) => udfs.runmap(a,cmd,args))
+    sq_udf.register("runrow", (a: PortableImagePlus, cmd: String, args: String) => udfs.runrow(a,cmd,args))
+    sq_udf.register("stats",(a: PortableImagePlus) => udfs.stats(a))
+    sq_udf.register("strstats",(a: PortableImagePlus) => udfs.stats(a).toString())
+    sq_udf.register("mean",(a: PortableImagePlus) => udfs.mean(a))
+    sq_udf.register("shape",(a: PortableImagePlus) => udfs.shape(a))
 
-    sq.udf.register("nslices",(a: PortableImagePlus) => udfs.nslices(a))
+    sq_udf.register("nslices",(a: PortableImagePlus) => udfs.nslices(a))
 
-    sq.udf.register("subtract",(a: PortableImagePlus, b: PortableImagePlus) => udfs.subtract(a,b))
+    sq_udf.register("subtract",(a: PortableImagePlus, b: PortableImagePlus) => udfs.subtract(a,b))
 
-    sq.udf.register("toarray",(s: PortableImagePlus) => udfs.toarray(s))
+    sq_udf.register("toarray",(s: PortableImagePlus) => udfs.toarray(s))
 
-    sq.udf.register("scale",(a: PortableImagePlus, scf: Double) => udfs.scale(a,scf))
+    sq_udf.register("scale",(a: PortableImagePlus, scf: Double) => udfs.scale(a,scf))
 
-    sq.udf.register("hist",(a: PortableImagePlus) => udfs.hist(a))
+    sq_udf.register("hist",(a: PortableImagePlus) => udfs.hist(a))
 
-    sq.udf.register("hist3",(a: PortableImagePlus, min: Double, max: Double, bins: Int) =>udfs.hist3(a,min,max,bins))
+    sq_udf.register("hist3",(a: PortableImagePlus, min: Double, max: Double, bins: Int) =>udfs.hist3(a,min,max,bins))
 
-    sq.udf.register("hist_compare",(a: PortableImagePlus, b: PortableImagePlus) => udfs.hist_compare(a,b))
+    sq_udf.register("hist_compare",(a: PortableImagePlus, b: PortableImagePlus) => udfs.hist_compare(a,b))
 
-    fs.registerSQLFunctions(sq)
+    fs.registerSQLFunctions(sq_udf)
   }
 
 
@@ -233,6 +234,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Show the metadata as a string for the current image
+      *
       * @param s the image
       * @return its calibration as a string
       */
@@ -240,6 +242,7 @@ object SQLFunctions extends Serializable {
 
     /**
       * Show the calibration as a string for the current image
+      *
       * @param s the image
       * @return its calibration as a string
       */
@@ -268,17 +271,17 @@ object SQLFunctions extends Serializable {
   /**
     * Add the debugging functions to the context
  *
-    * @param sq
+    * @param sq_udf the registration context to add the functions to
     * @return
     */
-  def registerDebugFunctions(sq: SQLContext,fs: ImageJSettings) = {
+  def registerDebugFunctions(sq_udf: UDFRegistration,fs: ImageJSettings) = {
     implicit val ijs = fs
-    sq.udf.register("tostring",(a: AnyRef) =>debugUdfs.tostring(a))
-    sq.udf.register("fromtable",(a: IJResultsTable, b: String) => debugUdfs.fromtable(a,b))
-    sq.udf.register("listplugins", () => debugUdfs.listplugins() )
-    sq.udf.register("listcommands", () => debugUdfs.listcommands() )
-    sq.udf.register("showcalibration", (s: PortableImagePlus) => debugUdfs.showcalibration(s))
-    fs.registerSQLDebugFunctions(sq)
+    sq_udf.register("tostring",(a: AnyRef) =>debugUdfs.tostring(a))
+    sq_udf.register("fromtable",(a: IJResultsTable, b: String) => debugUdfs.fromtable(a,b))
+    sq_udf.register("listplugins", () => debugUdfs.listplugins() )
+    sq_udf.register("listcommands", () => debugUdfs.listcommands() )
+    sq_udf.register("showcalibration", (s: PortableImagePlus) => debugUdfs.showcalibration(s))
+    fs.registerSQLDebugFunctions(sq_udf)
   }
 
 }

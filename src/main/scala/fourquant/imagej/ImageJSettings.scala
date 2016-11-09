@@ -2,7 +2,7 @@ package fourquant.imagej
 
 import ij.IJ
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.UDFRegistration
 
 /**
   * A class which hangs around and keeps all of the imagej settings (so they can be sent to
@@ -37,14 +37,16 @@ case class ImageJSettings(ijPath: String,
 
   /**
     * If there are any special or additional functions to be registered by the current IJ settings
-    * @param sq the context to register the functions to
+ *
+    * @param sq_udf the context to register the functions to
     */
-  def registerSQLFunctions(sq: SQLContext): Unit = {}
+  def registerSQLFunctions(sq_udf: UDFRegistration): Unit = {}
   /**
     * If there are any special or additional functions to be registered by the current IJ settings
-    * @param sq the context to register the functions to
+ *
+    * @param sq_udf the context to register the functions to
     */
-  def registerSQLDebugFunctions(sq: SQLContext): Unit = {}
+  def registerSQLDebugFunctions(sq_udf: UDFRegistration): Unit = {}
 
   def setupSpark(sc: SparkContext, partRun: Boolean = false) = {
     if(!showGui) {

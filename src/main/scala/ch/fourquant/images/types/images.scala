@@ -1,12 +1,6 @@
 package ch.fourquant.images.types
 
-import fourquant.imagej.ImagePlusIO.ImageLog
 import fourquant.imagej.PortableImagePlus
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter
-import org.apache.spark.sql.catalyst.expressions.{MutableRow, GenericInternalRow, GenericMutableRow}
-import org.apache.spark.sql.{Row, types}
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
 
 
@@ -35,7 +29,7 @@ case class FullSQLImage(path: String, name: String, parent: String,fullpath: Arr
                         image: PortableImagePlus) {
   def this(sample: String, image: PortableImagePlus) =
     this(sample,sample.split("/").reverse.head,
-      sample.split("/").reverse.apply(2),sample.split("/"),
+      sample.split("/").reverse.toList.tail.headOption.getOrElse(""),sample.split("/"),
       image.getImg().getWidth,image.getImg().getHeight(),
       image.getImg().getNSlices(),image)
 

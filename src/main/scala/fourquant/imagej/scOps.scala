@@ -1,19 +1,16 @@
 package fourquant.imagej
 
-import ch.fourquant.images.types.HistogramCC
 import fourquant.imagej.ImagePlusIO.{ImageLog, LogEntry}
 import fourquant.imagej.PortableImagePlus.IJMetaData
 import fourquant.io.hadoop.ByteOutputFormat
-import ij.{IJ, ImagePlus, ImageStack}
-import org.apache.hadoop.fs.Path
+import ij.ImagePlus
 import org.apache.hadoop.io.{BytesWritable, NullWritable}
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFormat}
 import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat, Job => NewHadoopJob}
 import org.apache.spark.SparkContext
-import org.apache.spark.input.ImagePlusFileInputFormat
-import org.apache.spark.rdd.{RDD}
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{SQLContext, SparkSession}
 
 import scala.reflect.ClassTag
 
@@ -322,22 +319,52 @@ def SetupImageJInPartition(ijs: ImageJSettings): Unit = ijs.setupFiji
   @deprecated("should be avoided, but makes some operations easier","1.0")
   implicit def ImagePlusToPortableImagePlus(imp: ImagePlus) = new PortableImagePlus(imp)
 
+  @deprecated("implicits have been moved to sub-object, also SQLContext has been deprecated","1.0")
   implicit class ImageJFriendlySQLContext(sq: SQLContext) {
     /**
       * setup imagej in all instances and register plugins
       *
       * @param fs
       */
+    @deprecated("implicits have been moved and sqlcontext deprecated","1.0")
     def registerImageJ(implicit fs: ImageJSettings): Unit = {
       fs.setupSpark(sq.sparkContext)
       registerImageJFunctions(fs)
     }
 
     /** add all the needed udfs to the sqlcontext **/
+    @deprecated("implicits have been moved and sqlcontext deprecated","1.0")
     def registerImageJFunctions(implicit fs: ImageJSettings): Unit = {
-      SQLFunctions.registerImageJ(sq,fs)
-      SQLFunctions.registerDebugFunctions(sq,fs)
+      SQLFunctions.registerImageJ(sq.udf,fs)
+      SQLFunctions.registerDebugFunctions(sq.udf,fs)
     }
+  }
+
+  object implicits extends Serializable {
+
+    /**
+      * A SparkSession with ImageJ functions integrated
+      * @param ss
+      */
+    implicit class ImageJFriendlySession(ss: SparkSession) {
+      /**
+        * setup imagej in all instances and register plugins
+        *
+        * @param fs
+        */
+      def registerImageJ(implicit fs: ImageJSettings): Unit = {
+
+        fs.setupSpark(ss.sparkContext)
+        registerImageJFunctions(fs)
+      }
+
+      /** add all the needed udfs to the sqlcontext **/
+      def registerImageJFunctions(implicit fs: ImageJSettings): Unit = {
+        SQLFunctions.registerImageJ(ss.udf,fs)
+        SQLFunctions.registerDebugFunctions(ss.udf,fs)
+      }
+    }
+
   }
 
 
