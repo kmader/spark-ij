@@ -23,5 +23,3 @@ jobs:
         cd ..
     - name: compile
       run: mvn install -DskipTests
-    - name: test
-      run: mvn install
