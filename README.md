@@ -1,5 +1,4 @@
 ![](https://github.com/kmader/spark-ij/workflows/compile/badge.svg)
-![](https://github.com/kmader/spark-ij/workflows/SBT_Test/badge.svg)
 # Spark ImageJ
 
 A Spark interface for using ImageJ tools including running plugins, loading images (using the
