@@ -15,5 +15,13 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-    - name: Build Core
-      run: mvn install -DskipTests -Dcheckstyle.skip
+    - name: build_scifio
+      -run: |
+        git clone https://github.com/kmader/spark-scifio
+        cd spark-scifio
+        mvn install -DskipTests
+        cd ..
+    - name: compile
+      run: mvn install -DskipTests
+    - name: test
+      run: mvn install
