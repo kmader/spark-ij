@@ -1,5 +1,4 @@
-![](https://github.com/kmader/spark-ij/workflows/compile/badge.svg)
-# Spark ImageJ
+# Spark ImageJ ![](https://github.com/kmader/spark-ij/workflows/compile/badge.svg) ![](https://github.com/kmader/spark-ij/workflows/tests/badge.svg)
 
 A Spark interface for using ImageJ tools including running plugins, loading images (using the
 legacy methods) and running basic analyses which produce table outputs and can be collated.
