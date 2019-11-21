@@ -23,3 +23,7 @@ jobs:
         cd ..
     - name: compile
       run: mvn install -DskipTests
+    - uses: actions/upload-artifact@master
+      with:
+        name: spark_ij
+        path: target/spark-ij-1.0-SNAPSHOT.jar
